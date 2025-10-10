@@ -1,0 +1,52 @@
+name: Cerver Wiki
+
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+env:
+  WIKI_REPOSITORY: ermiry/cerver.wiki.git
+
+jobs:
+  publish:
+    name: Publish wiki
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout documentation
+        uses: actions/checkout@v6
+        with:
+          path: documentation
+
+      - name: Clone wiki
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+        run: |
+          test -n "$WIKI_TOKEN"
+          git clone "https://x-access-token:${WIKI_TOKEN}@github.com/${WIKI_REPOSITORY}" wiki
+
+      - name: Copy pages
+        run: |
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'README.md' \
+            documentation/ wiki/
+
+      - name: Push wiki
+        working-directory: wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "The wiki is up to date"
+            exit 0
+          fi
+          git commit -m "Published cerver-docs ${GITHUB_SHA::8}"
+          git push origin HEAD
