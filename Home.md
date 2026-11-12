@@ -1,6 +1,6 @@
 # Cerver Documentation
 
-Ermiry's Cerver Framework official documentation, for **cerver 1.8.1**, the core line (1.x).
+Ermiry's Cerver Framework official documentation, for **cerver 1.8.2**, the core line (1.x).
 
 Cerver is a framework to build fast and reliable servers in C, also usable from C++. It is a single shared library, `libcerver.so`, that only depends on pthreads, with what a server needs out of the box: TCP and UDP sockets in IPv4 and IPv6, the packets of its own protocol, handlers and threads, authentication and sessions, admins, a load balancer, file transfers, game lobbies, and the collections and utilities that all of them are built with.
 
@@ -35,7 +35,7 @@ Cerver is a framework to build fast and reliable servers in C, also usable from 
 | [[Examples]] | The examples of the repository and what each one shows |
 | [[Testing]] | The unit, integration and fuzz tests, and the sanitizers |
 | [[Performance]] | Allocations, recycling, caches, buffer sizes and the limits of each handler type |
-| [[Migration]] | The changes from cerver 1.7 to 1.8 and 1.8.1 |
+| [[Migration]] | The changes from cerver 1.7 to 1.8, 1.8.1 and 1.8.2 |
 | [[Troubleshooting]] | Common problems and how to solve them |
 
 ## Versions
