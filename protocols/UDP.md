@@ -85,7 +85,7 @@ Sets how many peers the cerver keeps at the same time; 0 does not limit them. Th
 size_t cerver_udp_peers_count (const Cerver *cerver);
 ```
 
-Returns the peers of the cerver, the pending ones too. It can be called from any thread.
+Returns the peers of the cerver, the pending ones too. It can be called from any thread: a peer that it does not count anymore is already out of the stats of the cerver, like `current_n_hold_connections` and `current_active_client_connections`.
 
 ## Types
 

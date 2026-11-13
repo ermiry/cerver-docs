@@ -115,6 +115,7 @@ Every setter of cerver with its default, in one place. Each one is described in 
 | `CERVER_EXPORT` | A function of the API for the applications |
 | `CERVER_PUBLIC` | A function that cerver uses and an application can also use |
 | `CERVER_PRIVATE` | An internal function, not part of this reference |
+| `CERVER_HIDDEN` | An internal function that `libcerver.so` does not export, so it never mixes with a function of the same name of another library in the process |
 | `CERVER_INLINE` | `inline` in C, nothing in C++ |
 | `CERVER_ZERO_INITIALIZER` | `{ 0 }` in C and `{ }` in C++: a struct set to zero without warnings in both |
 | `CERVER_PRINTF_FORMAT (format, first)` | Makes the compiler check the arguments against a `printf` format |
@@ -122,6 +123,8 @@ Every setter of cerver with its default, in one place. Each one is described in 
 | `DEPRECATED (func)` | Marks a function as deprecated |
 | `MIN (a, b)`, `MAX (a, b)` | |
 | `ARRAY_SIZE (a)`, `ARRAY_ELEM_AT (a, i, v)` | The elements of an array, and the element `i` or `v` when it is out of range |
+
+It also includes `<stdarg.h>`, so `va_copy` is always the one of the compiler.
 
 ## See also
 

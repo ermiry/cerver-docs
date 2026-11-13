@@ -1,6 +1,6 @@
 # Migration
 
-What changes for an application that moves from cerver 1.7 to 1.8, and from 1.8 to 1.8.1. The complete list of every beta, with the details of each change, is [`incompatibilities.md`](https://github.com/ermiry/cerver/blob/master/incompatibilities.md) in the repository.
+What changes for an application that moves from cerver 1.7 to 1.8, from 1.8 to 1.8.1, and from 1.8.1 to 1.8.2. The complete list of every beta, with the details of each change, is [`incompatibilities.md`](https://github.com/ermiry/cerver/blob/master/incompatibilities.md) in the repository.
 
 ## From 1.7 to 1.8
 
@@ -54,6 +54,15 @@ The protocol does not change: a 1.8.1 talks with a 1.8.
 - **`connection_send_packet ()`** deletes a packet that it can not queue.
 - **`file_read ()`** gives the bytes that it read, and takes a `NULL` size.
 - **`c_string_concat_safe ()`** takes a `char *` destination (it was `const char *`).
+
+## From 1.8.1 to 1.8.2
+
+The protocol and the ABI do not change: a 1.8.2 talks with a 1.8.1, and a program built with the 1.8.1 runs with it.
+
+- **The base64 macros** take their argument in parentheses: `base64_decode_len (size + 1)` is now the length of `size + 1` characters.
+- **`va_copy`** always comes from `<stdarg.h>`, that `config.h` includes.
+- **`cerver_udp_peers_count ()`**: a peer that it does not count anymore is already out of the stats of the cerver.
+- **New:** the canonical base64url of [[Base64]] and `CERVER_HIDDEN` (see [[Configuration]]).
 
 ## See also
 
