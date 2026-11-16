@@ -44,8 +44,8 @@ The client connects to `127.0.0.1:7000`, sends `Hello from cerver!` in a `PACKET
 
 ``` c
 #include <cerver/cerver.h>
-#include <cerver/handler.h>
-#include <cerver/packets.h>
+#include <cerver/handler/handler.h>
+#include <cerver/packets/packets.h>
 
 static Cerver *echo_cerver = NULL;
 
@@ -87,14 +87,14 @@ static void echo_stop (int signal_number) {
 3. **`cerver_set_handler_type ()`** chooses how the connections are received. `CERVER_HANDLER_TYPE_POLL` receives every connection in a single thread with `poll ()`; `CERVER_HANDLER_TYPE_THREADS` receives each one in its own thread (see [[Handlers]]).
 4. **`handler_create ()`** wraps a function that gets each packet. With **`handler_set_direct_handle ()`** the function runs in the thread that received the packet; without it, the handler has its own thread and a queue. **`cerver_set_app_handlers ()`** gives the cerver the handlers of `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR`, and the cerver owns them from then on.
 5. **The handler** gets a `Packet`: its header, its data and the cerver, client and connection that it came from. The cerver deletes the packet after the handler returns. To answer, it creates a packet with **`packet_create ()`**, builds its bytes with **`packet_generate ()`**, sends it with **`packet_send_to ()`** and deletes it.
-6. **`cerver_start ()`** opens the socket and blocks while the cerver runs. **`cerver_shutdown ()`**, that is safe to call from a signal handler, stops it and makes `cerver_start ()` return.
+6. **`cerver_start ()`** opens the socket and blocks while the cerver runs. **`cerver_shutdown ()`**, that is async-signal-safe in a build without `CERVER_DEBUG`, stops it and makes `cerver_start ()` return.
 7. **`cerver_teardown ()`** drains the connections and the handlers that are working and releases the cerver. It is also the way to release a cerver that failed to start.
 
 ## 5. What the client does
 
 ``` c
-#include <cerver/client.h>
-#include <cerver/connection.h>
+#include <cerver/client/client.h>
+#include <cerver/connection/connection.h>
 
 Client *client = client_create ();
 

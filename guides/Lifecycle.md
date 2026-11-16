@@ -39,7 +39,7 @@ It returns 0 after the cerver was stopped, and 1 if it failed to start: a port i
 
 ### Stop
 
-`cerver_shutdown ()` stops accepting connections and wakes up `cerver_start ()`. It is safe to call it from a signal handler, from another thread and more than once, and a stop before `cerver_start ()` cancels the start. The usual way:
+`cerver_shutdown ()` stops accepting connections and wakes up `cerver_start ()`. It can be called from another thread and more than once, and from a signal handler in a build without `CERVER_DEBUG`: the stop only uses atomics, `shutdown ()` and a `write ()` in the stop pipe of the cerver, which also wakes up its threads that sleep. With `CERVER_DEBUG` (the `development` build) it logs the stop, which is not async-signal-safe. A stop before `cerver_start ()` cancels the start. The usual way:
 
 ``` c
 static Cerver *my_cerver = NULL;
