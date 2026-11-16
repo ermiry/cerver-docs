@@ -1,6 +1,6 @@
 # Receive
 
-`#include <cerver/receive.h>`
+`#include <cerver/handler/receive.h>`
 
 How the bytes that a socket receives become packets. A `recv ()` can end anywhere: in the middle of a header, in the middle of the data of a packet, or with several packets at once. Every connection has a `ReceiveHandle` that keeps what was left of the previous `recv ()`, so the packets are assembled no matter where the buffers are split.
 
@@ -38,7 +38,7 @@ A cerver receives from three kinds of connections, the `type` of the handle: `RE
 const char *receive_error_to_string (const ReceiveError error);
 ```
 
-The name of the result of a `recv ()`: `RECEIVE_ERROR_NONE`, `TIMEOUT` (the receive timeout expired), `EMPTY` (the peer closed the connection) or `FAILED`.
+The text of the result of a `recv ()`: `"None"`, `"Timeout"` (the receive timeout expired; it was `"Timeoout"` before 1.9), `"Empty"` (the peer closed the connection) or `"Failed"`.
 
 #### `receive_type_to_string ()`
 

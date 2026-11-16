@@ -1,6 +1,6 @@
 # Serializer
 
-`#include <cerver/serializer.h>`
+`#include <cerver/packets/serializer.h>`
 
 The serializer encodes C structs as **CBOR** maps (RFC 8949) and decodes them back with a **schema**: a table of the fields of the struct, generated from a single list. It is how cerver sends its own objects (its info, the session tokens, the errors, the file headers, the lobbies), and how an application sends its own in the data of a packet (`packet_create_serialized ()`, `packet_get_object ()`, see [[Packets]]).
 

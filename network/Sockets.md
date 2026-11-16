@@ -1,6 +1,6 @@
 # Sockets
 
-`#include <cerver/socket.h>`
+`#include <cerver/network/socket.h>`
 
 A `Socket` is the file descriptor of a connection with the locks that make it safe to use from many threads, and the sends with a **deadline** that every packet and file of cerver go through.
 
@@ -23,7 +23,8 @@ A send can not wait forever for a peer that does not read. Every send has a **de
 
 - an interrupted send (`EINTR`) is always retried;
 - a full socket (`EAGAIN`) is retried while it can be written before the deadline;
-- a file is sent with `sendfile ()`, in the space that the send buffer has, waiting with `poll ()` between the pieces.
+- a file is sent with `sendfile ()`, in the space that the send buffer has, waiting with `poll ()` between the pieces;
+- a send of a packet, a file or the balancer that expires its deadline (`EAGAIN`) leaves the peer with a part of what was sent, so cerver shuts the socket down (`socket_end_on_send_timeout ()`): the thread that receives it ends its connection, and every send after it fails at once with `EPIPE` instead of waiting its own deadline.
 
 The caller of a send of this page holds the write mutex of the socket. The sends of [[Packets]] already do.
 

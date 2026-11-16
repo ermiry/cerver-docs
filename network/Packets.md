@@ -1,6 +1,6 @@
 # Packets
 
-`#include <cerver/packets.h>`
+`#include <cerver/packets/packets.h>`
 
 A packet is a message of the cerver [[Protocol]]: a header of 32 bytes and its data. This page has how to create, fill, send and check packets, the packet types and the protocol id and version of an application. The bytes on the wire are in [[Protocol]].
 
@@ -352,7 +352,7 @@ Sets where `packet_send ()` sends the packet.
 u8 packet_send (const Packet *packet, int flags, size_t *total_sent, bool raw);
 ```
 
-Sends a generated packet to its connection, with the flags of `send ()` (`MSG_NOSIGNAL` is always added) and the send timeout of the connection. With `raw`, only its data is sent, without the header. `total_sent` gets the bytes sent, and can be `NULL`.
+Sends a generated packet to its connection, with the flags of `send ()` (`MSG_NOSIGNAL` is always added) and the send timeout of the connection. With `raw`, only its data is sent, without the header. `total_sent` gets the bytes sent, and can be `NULL`. A send that times out ends the connection (see [[Sockets]]).
 
 - **Returns** 0 on success, 1 on error.
 
