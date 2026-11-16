@@ -53,9 +53,14 @@ How many values the table has, and whether a key is in it.
 int htab_insert (Htab *ht, const void *key, size_t key_size, void *val, size_t val_size);
 void *htab_get (Htab *ht, const void *key, size_t key_size);
 void *htab_remove (Htab *ht, const void *key, size_t key_size);
+
+unsigned int htab_get_apply (
+	Htab *ht, const void *key, size_t key_size,
+	void (*method)(void *data, void *method_args), void *method_args
+);
 ```
 
-Insert a value with its key (0 on success, 1 on error or if the key exists), get the value of a key (`NULL` without one), and remove it and return it to the caller.
+Insert a value with its key (0 on success, 1 on error or if the key exists), get the value of a key (`NULL` without one), and remove it and return it to the caller. `htab_get ()` returns the value after the mutex is released, so another thread can remove it: `htab_get_apply ()` runs `method` with the value of the key while the mutex is held; it must not change the table (0 if it ran, 1 without a value).
 
 ``` c
 void htab_print (Htab *htab);

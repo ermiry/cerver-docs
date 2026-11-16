@@ -8,7 +8,7 @@ An `AVLTree` is a balanced binary search tree of pointers, ordered by a comparat
 
 - The **comparator** orders the data: a negative number, 0 or a positive number. The same data, or a query with the fields that the comparator reads, finds a node.
 - The **destroy** function releases the data of the nodes when the tree is cleared or deleted; without one the data stays, and the caller releases it.
-- `avl_insert_node ()` and `avl_remove_node ()` lock the mutex of the tree (`tree->mutex`); `avl_get_node_data ()` does not, and `avl_get_node_data_safe ()` does. Walking the nodes from `root`, like `client_broadcast_to_all_avl ()`, needs the mutex taken by the caller.
+- `avl_insert_node ()` and `avl_remove_node ()` lock the mutex of the tree (`tree->mutex`); `avl_get_node_data ()` does not, and `avl_get_node_data_safe ()` does, but returns the data after the mutex is released; `avl_get_node_data_apply ()` uses the data with the mutex held. Walking the nodes from `root`, like `client_broadcast_to_all_avl ()`, needs the mutex taken by the caller.
 
 ## Usage
 
@@ -35,7 +35,7 @@ void avl_set_destroy (AVLTree *tree, void (*destroy)(void *data));
 void avl_delete (AVLTree *tree);
 ```
 
-Create a tree, set its comparator and its destroy, and delete it with its nodes (the data is released only with a destroy).
+Create a tree, set its comparator and its destroy, and delete it with its nodes (the data is released only with a destroy). `avl_init ()` returns `NULL` if the tree or its mutex can not be allocated.
 
 ``` c
 bool avl_is_empty (AVLTree *tree);
@@ -56,9 +56,14 @@ Insert data (0 on success, 1 on error), remove the node of some data and return 
 ``` c
 void *avl_get_node_data (AVLTree *tree, void *id, Comparator comparator);
 void *avl_get_node_data_safe (AVLTree *tree, void *id, Comparator comparator);
+
+unsigned int avl_get_node_data_apply (
+	AVLTree *tree, void *id, Comparator comparator,
+	void (*method)(void *data, void *method_args), void *method_args
+);
 ```
 
-Return the data that compares equal to `id`, with the comparator of the tree or another one, without and with the mutex.
+Return the data that compares equal to `id`, with the comparator of the tree or another one, without and with the mutex. `avl_get_node_data_apply ()` finds the data and runs `method` with it while the mutex is held; it must not change the tree (0 if it ran, 1 if it was not found).
 
 ## Types
 
