@@ -17,9 +17,9 @@ A queue has from 1 to `JOB_QUEUE_MAX_PRIORITIES` (16) priorities, 3 by default; 
 | `job_queue_pull ()` | Never: `NULL` if the queue is empty |
 | `job_queue_pull_timeout ()` | Up to a timeout in milliseconds, or `JOB_QUEUE_WAIT_FOREVER` |
 | `job_queue_pull_interruptible ()` | Until a job arrives or a predicate says to stop |
-| `job_queue_request ()`, `job_queue_request_timeout ()` | For the job with an id, pushed with `job_queue_push_job_with_id ()` |
+| `job_queue_request ()`, `job_queue_request_timeout ()` | For the job with an id, pushed with `job_queue_push_job_with_id ()`; several threads can wait at the same time, each for its own id |
 
-`job_queue_signal ()` wakes up every thread that waits: they return `NULL`. A signal that arrives before a thread starts to wait is not lost. `job_queue_pull_interruptible ()` calls its predicate with the lock of the queue, so the thread that changes what it reads has to call `job_queue_signal ()` after the change.
+`job_queue_signal ()` wakes up every thread that waits: they return `NULL`, except the ones in `job_queue_request ()`, which keep waiting for their job. A signal that arrives before a thread starts to wait is not lost. `job_queue_pull_interruptible ()` calls its predicate with the lock of the queue, so the thread that changes what it reads has to call `job_queue_signal ()` after the change.
 
 ### Jobs from the pool
 
@@ -139,7 +139,7 @@ void *job_queue_request (JobQueue *job_queue, const u64 job_id);
 void *job_queue_request_timeout (JobQueue *job_queue, const u64 job_id, const u32 timeout);
 ```
 
-Wait for the job with an id, without a limit or up to `timeout` milliseconds.
+Wait for the job with an id, without a limit or up to `timeout` milliseconds. Each thread that waits has its own request in the list of the queue (`requests`), so several threads can wait at the same time without replacing each other.
 
 - **Return** the job, or `NULL` if it did not arrive.
 
@@ -231,7 +231,8 @@ Push a handler with the data and wait until it is done, and mark a handler as do
 
 | Type | What it is |
 |---|---|
-| `JobQueue` | A queue: its type, its pool, its rings by priority, its condition, its stats |
+| `JobQueue` | A queue: its type, its pool, its rings by priority, its condition, its list of `requests` (the threads in `job_queue_request ()`), its stats |
+| `JobQueueRequest` | A thread that waits for a job by its id: `id`, `job`, `next` (1.9b-2) |
 | `JobQueueType` | `JOB_QUEUE_TYPE_NONE`, `JOBS`, `HANDLERS` |
 | `Job` | `id`, `work`, `args` |
 | `JobHandler` | `cerver`, `connection`, `cond`, `mutex`, `done`, `data`, `data_delete` |
