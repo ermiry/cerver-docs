@@ -15,7 +15,7 @@ A TCP cerver receives its connections in one of two ways, set with `cerver_set_h
 | Accepting | The thread of `cerver_start ()`, in the same `poll ()` | The thread of `cerver_start ()`, with a blocking `accept ()` |
 | Receiving | A single thread, the same `poll ()` over every connection | Each connection in its own thread: a thread of the thpool while it is connected, or a detachable thread |
 | Direct handlers | In the thread of `poll ()`, so they block every connection while they run | In the thread of their connection, in parallel |
-| Sending | The sockets block up to the send timeout, so a client that does not read delays every connection | Only the thread of that connection waits |
+| Sending | The sockets block up to the send timeout, so a client that does not read delays every connection until the timeout ends its connection | Only the thread of that connection waits, until the timeout ends its connection |
 | Limits | `cerver_set_poll_fds ()`: the initial size of the poll array and the most connections | The threads of the thpool: with all of them busy, the overload policy decides |
 | Good for | Many connections with short work, or handlers with their own queues | Fewer connections that live long and do work in their handlers |
 
@@ -128,7 +128,7 @@ Returns `true` while the cerver is accepting connections. It can be called from 
 u8 cerver_shutdown (Cerver *cerver);
 ```
 
-Stops accepting connections and wakes up `cerver_start ()`, that returns. It can be called from a signal handler, from another thread and more than once. The connections in progress are drained by `cerver_teardown ()`.
+Stops accepting connections and wakes up `cerver_start ()`, that returns, and the threads of the cerver that sleep (through its stop pipe). It can be called from another thread and more than once. It is async-signal-safe in a build without `CERVER_DEBUG`; with it, the stop is logged, which is not safe in a signal handler. The connections in progress are drained by `cerver_teardown ()`.
 
 - **Returns** 0 on success, 1 for a `NULL` cerver.
 
@@ -256,7 +256,7 @@ Sets whether `cerver_start ()` ignores `SIGPIPE` when the process has not set a 
 void cerver_set_send_timeout (Cerver *cerver, u32 send_timeout);
 ```
 
-Sets the deadline in seconds of each send to an accepted connection, so a client that never reads can not block a thread forever. 0 disables it. The default is `CERVER_DEFAULT_SEND_TIMEOUT`, 32 seconds.
+Sets the deadline in seconds of each send to an accepted connection, so a client that never reads can not block a thread forever. 0 disables it. The default is `CERVER_DEFAULT_SEND_TIMEOUT`, 32 seconds. A send that times out leaves the client with a part of a packet, so its socket is shut down: the thread that receives the connection ends it, and the next sends to it fail at once (`EPIPE`) instead of waiting their own timeout.
 
 #### `cerver_set_sockets_pool_init ()`
 
@@ -264,7 +264,7 @@ Sets the deadline in seconds of each send to an accepted connection, so a client
 void cerver_set_sockets_pool_init (Cerver *cerver, unsigned int n_sockets);
 ```
 
-Deprecated: it does nothing. Each connection owns its socket since cerver 1.8.
+Deprecated (marked with `DEPRECATED ()`, so the compiler warns, and it goes away in the 3.0): it does nothing. Each connection owns its socket since cerver 1.8.
 
 ### Receiving
 
@@ -357,7 +357,7 @@ Replaces how the cerver handles the raw bytes that it receives, for an applicati
 void cerver_set_check_packets (Cerver *cerver, bool check_packets);
 ```
 
-With `true`, every packet is checked with `packet_check ()`: its protocol id and its protocol version have to match the local ones (see [[Protocol]]). A packet that fails is a bad packet. The default is `false`.
+With `true`, every packet is checked with `packet_check ()`: its protocol id and its protocol version have to match the local ones (see [[Protocol]]). A packet that fails is a bad packet. The default is `false`. It does not apply to the admins, which have `admin_cerver_set_check_packets ()`.
 
 #### `cerver_set_max_bad_packets ()`
 
@@ -464,7 +464,7 @@ The stats of a cerver are in `cerver->stats`, a `CerverStats` updated with atomi
 void cerver_stats_set_threshold_time (Cerver *cerver, time_t threshold_time);
 ```
 
-Sets how often, in seconds, the stats of the packets are reset. The default is a day.
+Sets how often, in seconds, the counters that grow are reset; the current counters and the packets by type are not. The threshold time starts with the call, and the counters are reset at the first registration of a client, or the first `cerver_stats_print ()`, after the time passed. 0, the default, never resets them.
 
 #### `cerver_stats_print ()`
 
@@ -484,7 +484,7 @@ Prints the stats of the cerver, and the packets received and sent by type when `
 | `CerverOverloadPolicy` | `CERVER_OVERLOAD_POLICY_NONE`, `WAIT`, `REJECT` |
 | `CerverDrainPolicy` | `CERVER_DRAIN_POLICY_NONE`, `RUN`, `REJECT` |
 | `CerverInfo` | The `name`, the `alias`, the `welcome` message, the time it started and its `uptime` in seconds |
-| `CerverStats` | The packets, receives and bytes from the clients and the on hold connections, the packets and bytes sent, the current and total clients and connections, the rejected connections, and the packets per type received and sent |
+| `CerverStats` | The packets, receives and bytes from the clients and the on hold connections, the packets and bytes sent, the current and total clients and connections, the clients registered in the current threshold time (`unique_clients`), the rejected connections, the reset of the counters (`threshold_time`, `threshold_start`), and the packets per type received and sent |
 | `CerverUpdate` | What an update gets: `cerver` and `args` |
 | `CerverSummary` | The info of a cerver that it sends to its clients (see [[Protocol]]) |
 

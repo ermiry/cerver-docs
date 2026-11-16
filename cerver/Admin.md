@@ -1,6 +1,6 @@
 # Admin
 
-`#include <cerver/admin.h>`, and `cerver_set_admin_enable ()` of `#include <cerver/cerver.h>`.
+`#include <cerver/admin/admin.h>`, and `cerver_set_admin_enable ()` of `#include <cerver/cerver.h>`.
 
 An admin is a privileged client of a cerver: it connects to the same port, authenticates with its own method, and its packets go to their own handlers, apart from the ones of the clients. It is meant to monitor and control a cerver, like to ask for its stats or to change its configuration while it runs.
 
@@ -10,14 +10,14 @@ An admin is a privileged client of a cerver: it connects to the same port, authe
 
 1. The cerver enables its admins with `cerver_set_admin_enable ()`, that creates its `AdminCerver` (`cerver->admin`). The cerver must require authentication (see [[Auth]]), because an admin arrives like any other connection, on hold.
 2. The connection of the admin sets its credentials with `admin_auth` (`connection_set_auth_data (connection, data, size, delete, true)`), so it sends an `AUTH_PACKET_TYPE_ADMIN_AUTH`.
-3. The authenticate method of the admins (`admin_cerver_set_authenticate ()`) checks them, with the same `AuthMethod` as the clients. On success, the connection becomes an `Admin`, with its own `Client`, and `CERVER_EVENT_ADMIN_CONNECTED` is triggered; a failed one triggers `CERVER_EVENT_ADMIN_FAILED_AUTH`.
+3. The authenticate method of the admins (`admin_cerver_set_authenticate ()`) checks them, with the same `AuthMethod` as the clients. On success, the connection becomes an `Admin`, with its own `Client`, and `CERVER_EVENT_ADMIN_CONNECTED` is triggered; a failed one triggers `CERVER_EVENT_ADMIN_FAILED_AUTH`. An admin that authenticates beyond the limits gets a `CERVER_ERROR_CERVER_ERROR` and its connection is closed.
 4. The admin cerver receives the admins in its own thread, with `poll ()`, and passes their `PACKET_TYPE_APP`, `PACKET_TYPE_APP_ERROR` and `PACKET_TYPE_CUSTOM` packets to its own handlers.
 
-The cerver accepts at most `admin_cerver_set_max_admins ()` admins (1 by default), each one with at most `admin_cerver_set_max_admin_connections ()` connections (2). A UDP cerver can not have admins.
+The cerver accepts at most `admin_cerver_set_max_admins ()` admins (**1 by default**, so a second admin is rejected unless the limit is raised), each one with at most `admin_cerver_set_max_admin_connections ()` connections (2); 0 is no limit for either. A UDP cerver can not have admins.
 
 ### The handlers of the admins
 
-They are [[Handlers]] like the ones of the cerver: a direct handler gets the `Packet *`, and one with a queue gets a `HandlerData *`. The packet comes from the connection of the admin; `admin_get_by_sock_fd ()` returns its `Admin`. The packets are deleted after their handlers, unless the `*_handler_delete ()` setters say otherwise, and the admin cerver owns its handlers.
+They are [[Handlers]] like the ones of the cerver: a direct handler gets the `Packet *`, and one with a queue gets a `HandlerData *`. The packet comes from the connection of the admin; `admin_get_with_sock_fd ()` returns its `Admin`. The packets are deleted after their handlers, unless the `*_handler_delete ()` setters say otherwise, and the admin cerver owns its handlers.
 
 ## Usage
 
@@ -62,7 +62,7 @@ Sets the method that authenticates the admins; it gets an `AuthMethod *` and ret
 void admin_cerver_set_max_admins (AdminCerver *admin_cerver, u8 max_admins);
 ```
 
-Sets how many admins can be connected at the same time. The default is `ADMIN_CERVER_DEFAULT_MAX_ADMINS`, 1.
+Sets how many admins can be connected at the same time. The default is `ADMIN_CERVER_DEFAULT_MAX_ADMINS`, 1; 0 is no limit. An admin that authenticates when the limit is reached is rejected.
 
 #### `admin_cerver_set_max_admin_connections ()`
 
@@ -70,7 +70,7 @@ Sets how many admins can be connected at the same time. The default is `ADMIN_CE
 void admin_cerver_set_max_admin_connections (AdminCerver *admin_cerver, u8 max_admin_connections);
 ```
 
-Sets how many connections each admin can have. The default is `ADMIN_CERVER_DEFAULT_MAX_ADMIN_CONNECTIONS`, 2.
+Sets how many connections each admin can have. The default is `ADMIN_CERVER_DEFAULT_MAX_ADMIN_CONNECTIONS`, 2; 0 is no limit. An admin whose client has more connections when it authenticates is rejected.
 
 #### `admin_cerver_set_bad_packets_limit ()`
 
@@ -110,7 +110,7 @@ Sets the timeout in milliseconds of each `poll ()` of the admins. The default is
 void admin_cerver_set_check_packets (AdminCerver *admin_cerver, bool check_packets);
 ```
 
-With `true`, the packets of the admins are checked with `packet_check ()`. The default is `false`.
+With `true`, the packets of the admins are checked with `packet_check ()`. The default is `false`. It is independent of `cerver_set_check_packets ()`, that the admins used before 1.9.
 
 ### Handlers
 
@@ -123,7 +123,7 @@ void admin_cerver_set_app_handlers (
 );
 ```
 
-Sets the handlers of the `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR` packets of the admins. The admin cerver owns them.
+Sets the handlers of the `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR` packets of the admins. The admin cerver owns them: a different handler deletes the one that was set (the same one again is kept).
 
 #### `admin_cerver_set_custom_handler ()`
 
@@ -131,7 +131,7 @@ Sets the handlers of the `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR` packets o
 void admin_cerver_set_custom_handler (AdminCerver *admin_cerver, Handler *custom_handler);
 ```
 
-Sets the handler of the `PACKET_TYPE_CUSTOM` packets of the admins.
+Sets the handler of the `PACKET_TYPE_CUSTOM` packets of the admins. The admin cerver owns it: a different handler deletes the one that was set.
 
 #### `admin_cerver_set_app_handler_delete ()`, `admin_cerver_set_app_error_handler_delete ()`, `admin_cerver_set_custom_handler_delete ()`
 
@@ -217,11 +217,11 @@ Send a packet to the first connection of an admin, whole, split, or in pieces.
 
 - **Return** 0 on success, 1 on error.
 
-#### `admin_get_by_sock_fd ()`, `admin_get_by_session_id ()`
+#### `admin_get_with_sock_fd ()`, `admin_get_with_session_id ()`
 
 ``` c
-Admin *admin_get_by_sock_fd (AdminCerver *admin_cerver, const i32 sock_fd);
-Admin *admin_get_by_session_id (AdminCerver *admin_cerver, const char *session_id);
+Admin *admin_get_with_sock_fd (AdminCerver *admin_cerver, const i32 sock_fd);
+Admin *admin_get_with_session_id (AdminCerver *admin_cerver, const char *session_id);
 ```
 
 Return the admin with a connection of the socket, or with the session id of its client, or `NULL`.
@@ -234,22 +234,22 @@ void admin_set_data (Admin *admin, void *data, Action delete_data);
 
 Keeps data of the application in the admin, released with `delete_data` when the admin is deleted (`NULL` does not release it).
 
-#### `admin_remove_connection_by_sock_fd ()`
+#### `admin_remove_connection_with_sock_fd ()`
 
 ``` c
-AdminConnectionsStatus admin_remove_connection_by_sock_fd (
+AdminConnectionsStatus admin_remove_connection_with_sock_fd (
 	AdminCerver *admin_cerver, Admin *admin, const i32 sock_fd
 );
 ```
 
-Removes a connection of an admin; an admin without connections left is dropped.
+Removes the connection of an admin with the socket; an admin without connections left is dropped and deleted. An admin with a single connection only loses it when it has that socket.
 
-- **Returns** `ADMIN_CONNECTIONS_STATUS_ONE` if the admin still has a connection, `ADMIN_CONNECTIONS_STATUS_DROPPED` if it was dropped, or `ADMIN_CONNECTIONS_STATUS_ERROR`.
+- **Returns** `ADMIN_CONNECTIONS_STATUS_NONE` if the admin still has other connections, `ADMIN_CONNECTIONS_STATUS_DROPPED` if it was dropped, or `ADMIN_CONNECTIONS_STATUS_ERROR`; `ONE` is never returned.
 
-#### `admin_comparator_by_id ()`
+#### `admin_comparator_with_id ()`
 
 ``` c
-int admin_comparator_by_id (const void *a, const void *b);
+int admin_comparator_with_id (const void *a, const void *b);
 ```
 
 Compares two admins by their `id`, for the lists of admins.

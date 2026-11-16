@@ -1,6 +1,6 @@
 # Errors
 
-`#include <cerver/errors.h>`, and the errors of `#include <cerver/client.h>`.
+`#include <cerver/handler/errors.h>`, and the errors of `#include <cerver/client/client.h>`.
 
 An error is a `PACKET_TYPE_ERROR` packet with an `ErrorMessage`. A cerver sends them to its clients, like for a failed authentication, a bad packet or a file that was not found, and the side that receives one runs the action registered for its error type. The actions are registered like the [[Events]].
 
@@ -27,7 +27,7 @@ An `ErrorMessage` is an object of the [[Serializer]] with the `error_type`, a `t
 
 ### Who owns the data
 
-The action releases its data with `cerver_error_event_data_delete ()` or `client_error_data_delete ()`. The arguments of the action follow the same rules as the ones of an event: they belong to the registration, and with `drop_after_trigger` they go with the data of the only trigger.
+The action releases its data with `cerver_error_event_data_delete ()` or `client_error_data_delete ()`. The arguments of the action follow the same rules as the ones of an event: they are shared by the registration and the data of each trigger (`shared_args`), so an error that is replaced, unregistered or dropped while a trigger still runs keeps its arguments until that trigger deletes its data.
 
 ## Usage
 
@@ -87,7 +87,7 @@ Registers the action of an error that the clients send to the cerver. The action
 u8 cerver_error_event_unregister (Cerver *cerver, const CerverErrorType error_type);
 ```
 
-Unregisters the action of an error and releases its arguments.
+Unregisters the action of an error; its arguments are released once every trigger that still runs is done with them.
 
 - **Returns** 0 on success, 1 on error or if the error had no action.
 
@@ -161,7 +161,7 @@ Registers the action of an error that a cerver sends to the client. The action g
 u8 client_error_unregister (Client *client, const ClientErrorType error_type);
 ```
 
-Unregisters the action of an error and releases its arguments.
+Unregisters the action of an error; its arguments are released once every trigger that still runs is done with them.
 
 - **Returns** 0 on success, 1 on error or if the error had no action.
 
@@ -210,8 +210,8 @@ Creates an error packet and sends it to the cerver of a connection.
 |---|---|
 | `CerverErrorType`, `ClientErrorType` | The error types above |
 | `CerverErrorEvent`, `ClientError` | A registered action; set them only with the register functions |
-| `CerverErrorEventData` | `cerver`, `client`, `connection`, `action_args`, `delete_action_args`, `owns_action_args`, `error_message` |
-| `ClientErrorData` | `client`, `connection`, `action_args`, `delete_action_args`, `owns_action_args`, `error_message` |
+| `CerverErrorEventData` | `cerver`, `client`, `connection`, `action_args`, `delete_action_args`, `owns_action_args`, `error_message`, `shared_args` |
+| `ClientErrorData` | `client`, `connection`, `action_args`, `delete_action_args`, `owns_action_args`, `error_message`, `shared_args` |
 | `ErrorMessage` | The data of an error packet: `timestamp`, `error_type`, `msg` |
 
 ## Constants

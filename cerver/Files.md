@@ -1,6 +1,6 @@
 # Files
 
-`#include <cerver/files.h>`, and the files of `#include <cerver/client.h>`.
+`#include <cerver/files/files.h>`, and the files of `#include <cerver/client/client.h>`.
 
 Cerver sends and receives files between a cerver and its clients, in both directions, and has the file helpers that it uses itself: directories, copies, moves, reads, extensions and image types. A **files cerver** (`CERVER_TYPE_FILES`) answers the file requests of its clients with its `FileCerver`; a client answers the ones of its cerver with its own paths.
 
@@ -15,18 +15,18 @@ A file travels in two parts: first a `PACKET_TYPE_REQUEST` packet with a `FileHe
 | Request | Who sends it | What the other side does |
 |---|---|---|
 | `REQUEST_PACKET_TYPE_GET_FILE` | A client, with `client_file_get ()` | The cerver looks for the file in its paths and sends it, or answers `CERVER_ERROR_FILE_NOT_FOUND` |
-| `REQUEST_PACKET_TYPE_SEND_FILE` | A client, with `client_file_send ()`, or a cerver with `file_send ()` | The receiver saves the file in its uploads path, or passes it to its upload handler, and runs its upload callback |
+| `REQUEST_PACKET_TYPE_SEND_FILE` | A client, with `client_file_send ()`, or a cerver with `file_send ()` | The receiver saves the file in its uploads path, or passes it to its upload handler, and runs its upload callback; a receiver without an uploads path rejects it |
 
 ### Safe names
 
-A `FileHeader` that comes from the network is used only if its filename is terminated with a NUL, not empty, a single name without `/`, and not `.` or `..`, so a request can not read past the header or reach a file outside of the configured paths. The receiver saves the file with that name inside its uploads path; a custom upload handler can clean it further with `files_sanitize_filename ()`.
+A `FileHeader` that comes from the network is used only if its filename is terminated with a NUL, not empty, a single name without `/`, and not `.` or `..`, so a request can not read past the header or reach a file outside of the configured paths. The receiver saves the file inside its uploads path, with its name after a time and a random number (`<uploads>/<time>-<random>-<name>`); a custom upload handler can clean it further with `files_sanitize_filename ()`.
 
 ### A files cerver
 
 `cerver_create (CERVER_TYPE_FILES, ...)` creates the `FileCerver` of the cerver, in `cerver->cerver_data`:
 
 - `file_cerver_add_path ()` adds a directory where the requested files are looked for, up to `FILE_CERVER_MAX_PATHS` (32);
-- `file_cerver_set_uploads_path ()` sets where the uploaded files are saved;
+- `file_cerver_set_uploads_path ()` sets where the uploaded files are saved; **without it, the default upload handler rejects every upload**: the client gets a `CERVER_ERROR_SEND_FILE` and its connection is ended, because the bytes of the file follow its packet;
 - `file_cerver_set_file_upload_handler ()` replaces how an upload is saved, and `file_cerver_set_file_upload_cb ()` runs after each one.
 
 ## Usage
@@ -75,7 +75,7 @@ Adds a directory where the requested files are looked for.
 void file_cerver_set_uploads_path (FileCerver *file_cerver, const char *uploads_path);
 ```
 
-Sets the directory where the files that the clients upload are saved.
+Sets the directory where the files that the clients upload are saved. Without it, the default upload handler rejects every upload and ends its connection.
 
 #### `file_cerver_set_file_upload_handler ()`
 
@@ -91,7 +91,7 @@ void file_cerver_set_file_upload_handler (
 );
 ```
 
-Replaces how an upload is saved. The handler gets the header, the bytes of the file that arrived with its packet (`file_data`), and has to receive the rest, `file_header->len - file_data_len` bytes, from the socket of the connection. It sets `saved_filename` to a string allocated with `malloc ()`, and returns 0 on success, 1 on error.
+Replaces how an upload is saved. The handler gets the header, the bytes of the file that arrived with its packet (`file_data`), and has to receive the rest, `file_header->len - file_data_len` bytes, from the socket of the connection. It sets `saved_filename` to a string allocated with `malloc ()`, and returns 0 on success, 1 on error. The default handlers remove a file whose write or receive fails after it was opened, so no partial file is left in the uploads path.
 
 #### `file_cerver_set_file_upload_cb ()`
 
@@ -164,7 +164,7 @@ void client_files_set_file_upload_cb (
 String *client_files_search_file (Client *client, const char *filename);
 ```
 
-The same as the ones of a files cerver, for the requests that a cerver sends to the client and the files that the client receives.
+The same as the ones of a files cerver, for the requests that a cerver sends to the client and the files that the client receives. Without an uploads path, the client rejects the files that a cerver sends.
 
 #### `client_file_get ()`
 
@@ -174,7 +174,7 @@ u8 client_file_get (Client *client, Connection *connection, const char *filename
 
 Asks the cerver for a file; the client saves it in its uploads path when it arrives.
 
-- **Returns** 0 if the request was sent, 1 on error.
+- **Returns** 0 if the request was sent, 1 on error or for a client without its uploads path.
 
 #### `client_file_send ()`
 
@@ -182,7 +182,7 @@ Asks the cerver for a file; the client saves it in its uploads path when it arri
 u8 client_file_send (Client *client, Connection *connection, const char *filename);
 ```
 
-Sends a file to the cerver.
+Sends a file to the cerver. The cerver gets the name after its last `/`, or the whole filename when it has none (a file of the current directory); a filename that ends with `/` is an error.
 
 - **Returns** 0 if the file was sent, 1 on error.
 
@@ -194,14 +194,14 @@ Sends a file to the cerver.
 ssize_t file_send (Cerver *cerver, Client *client, Connection *connection, const char *filename);
 ```
 
-Opens a file and sends it to a connection: its `FileHeader` in a packet and then its bytes.
+Opens a file and sends it to a connection: its `FileHeader` in a packet and then its bytes. The name that is sent is the one after the last `/`, or the whole filename when it has none.
 
 - **Returns** the bytes sent, or -1 on error.
 
-#### `file_send_by_fd ()`
+#### `file_send_with_fd ()`
 
 ``` c
-ssize_t file_send_by_fd (
+ssize_t file_send_with_fd (
 	Cerver *cerver, Client *client, Connection *connection,
 	int file_fd, const char *actual_filename, size_t filelen
 );
@@ -230,9 +230,9 @@ Check that a `FileHeader` has a safe name (see above), and decode and check the 
 unsigned int files_create_dir (const char *dir_path, mode_t mode);
 ```
 
-Creates a directory if it does not exist.
+Creates a directory if it does not exist; a directory that already exists is a success, also when another thread or process creates it at the same time.
 
-- **Returns** 0 on success, 1 on error.
+- **Returns** 0 if the directory was created or already existed, 1 for a `NULL` path, a path that exists and is not a directory, or a `mkdir ()` that failed.
 
 #### `files_create_recursive_dir ()`
 
@@ -320,7 +320,7 @@ Reads a whole file into a buffer terminated with a NUL, that the caller releases
 char *file_n_read (const char *filename, const size_t n_bytes, size_t *n_read);
 ```
 
-Reads up to `n_bytes` of a file, the same way.
+Reads up to `n_bytes` of a file the same way, and sets `n_read`, if it is not `NULL`, to the bytes that were read (before 1.9 it added them to its value).
 
 #### `file_get_lines ()`
 
@@ -363,15 +363,15 @@ The extension of a name, without the dot: a copy that the caller releases with `
 
 ### Images
 
-#### `files_image_get_type ()`, `files_image_get_type_from_file ()`, `files_image_get_type_by_extension ()`
+#### `files_image_get_type ()`, `files_image_get_type_from_file ()`, `files_image_get_type_with_extension ()`
 
 ``` c
 ImageType files_image_get_type (const char *filename);
 ImageType files_image_get_type_from_file (const void *file);
-ImageType files_image_get_type_by_extension (const char *filename);
+ImageType files_image_get_type_with_extension (const char *filename);
 ```
 
-The `ImageType` of a file by its magic bytes (opening it, or from bytes that were read), or by its extension: `IMAGE_TYPE_PNG`, `JPEG`, `GIF`, `BMP`, or `IMAGE_TYPE_NONE`.
+The `ImageType` of a file by its magic bytes (opening it, or from bytes that were read), or by its extension: `IMAGE_TYPE_PNG`, `JPEG`, `GIF`, `BMP`, or `IMAGE_TYPE_NONE`. The magic bytes are the first 24 bytes, so a file of 24 bytes or less is `IMAGE_TYPE_NONE`; a BMP starts with `BM` and has the size of a known DIB header at its byte 14 (before 1.9 it was never found by its bytes).
 
 #### `files_image_is_jpeg ()`, `files_image_extension_is_jpeg ()`, `files_image_is_png ()`, `files_image_extension_is_png ()`
 

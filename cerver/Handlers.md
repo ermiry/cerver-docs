@@ -1,6 +1,6 @@
 # Handlers
 
-`#include <cerver/handler.h>`, and the handler setters of `#include <cerver/cerver.h>`.
+`#include <cerver/handler/handler.h>`, and the handler setters of `#include <cerver/cerver.h>`.
 
 A handler is the function of the application that gets the packets of a type. This page has how the handlers run, the handlers of a cerver (by packet type, by request type and by id) and their stats. The handlers of a client are the same structure, set with the setters of [[Clients]]; how a cerver receives its connections, its **handler type**, is in [[Cerver]].
 
@@ -60,7 +60,7 @@ A packet without a handler, or that can not be queued, is deleted by cerver.
 
 ### Who owns the handler
 
-A handler belongs to the cerver (or the client) from the moment that a setter takes it: `cerver_set_app_handlers ()`, `cerver_set_custom_handler ()`, `cerver_set_request_handler ()` and `cerver_handlers_add ()`. The teardown stops it and deletes it. A setter that fails leaves the handler to its caller.
+A handler belongs to the cerver (or the client) from the moment that a setter takes it: `cerver_set_app_handlers ()`, `cerver_set_custom_handler ()`, `cerver_set_request_handler ()` and `cerver_handlers_add ()`. The teardown stops it and deletes it. A setter that fails leaves the handler to its caller. `cerver_set_app_handlers ()` and `cerver_set_custom_handler ()` delete the handler that they replace when it is a different one, so the application must not delete the old one itself.
 
 ### Which handler gets a packet
 
@@ -123,7 +123,7 @@ Handler *handler_create (Action handler_method);
 
 Creates a handler with a queue that calls `handler_method` with each packet. Its id is -1, so it can not be added with `cerver_handlers_add ()`.
 
-- **Returns** the new handler, or `NULL` if it could not be allocated.
+- **Returns** the new handler, or `NULL` if it or its job queue could not be allocated.
 
 #### `handler_create_with_id ()`
 
@@ -134,7 +134,7 @@ Handler *handler_create_with_id (int id, Action handler_method);
 Creates a handler for the multiple handlers of a cerver, that gets the `PACKET_TYPE_APP` packets with `id` in the `handler_id` of their header.
 
 - **`id`**: from 0 to the `n_handlers` of `cerver_set_multiple_handlers ()` minus 1.
-- **Returns** the new handler, or `NULL` if it could not be allocated.
+- **Returns** the new handler, or `NULL` if it or its job queue could not be allocated.
 
 #### `handler_set_direct_handle ()`
 
@@ -198,7 +198,7 @@ void cerver_set_app_handlers (
 );
 ```
 
-Sets the handlers of `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR`; either can be `NULL`. The cerver owns them. Call it before `cerver_start ()`.
+Sets the handlers of `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR`; either can be `NULL`. The cerver owns them; a different handler deletes the one that was already set, and the same one again is kept. Call it before `cerver_start ()`.
 
 #### `cerver_set_custom_handler ()`
 
@@ -206,7 +206,7 @@ Sets the handlers of `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR`; either can b
 void cerver_set_custom_handler (Cerver *cerver, Handler *custom_handler);
 ```
 
-Sets the handler of `PACKET_TYPE_CUSTOM`. The cerver owns it.
+Sets the handler of `PACKET_TYPE_CUSTOM`. The cerver owns it; a different handler deletes the one that was set.
 
 #### `cerver_set_app_handler_delete ()`, `cerver_set_app_error_handler_delete ()`, `cerver_set_custom_handler_delete ()`
 

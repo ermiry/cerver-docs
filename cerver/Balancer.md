@@ -1,6 +1,6 @@
 # Balancer
 
-`#include <cerver/balancer.h>`
+`#include <cerver/load/balancer.h>`
 
 A load balancer is a cerver that receives the packets of its clients and routes each one to one of its **services**, other cervers that it is connected to, and routes the responses of the services back to the client that sent the request. The clients and the services speak the normal cerver [[Protocol]]; the balancer only reads the header of each packet to choose its service and to remember the way back.
 
@@ -40,7 +40,7 @@ A service is registered with its address before the balancer starts, up to the `
 
 ### Threads
 
-The cerver of a balancer is a normal `Cerver` (`balancer->cerver`): set its handler type and its options before `balancer_start ()`, and stop it with `cerver_shutdown (balancer->cerver)`. It receives each client in its own thread (`CERVER_HANDLER_TYPE_THREADS`). The responses of each service are received in the thread of its connection. The packets are routed with a complete `send` under the write mutex of the socket, so the packets of different clients never mix in the connection of a service.
+The cerver of a balancer is a normal `Cerver` (`balancer->cerver`): set its handler type and its options before `balancer_start ()`, and stop it with `cerver_shutdown (balancer->cerver)`. It receives each client in its own thread (`CERVER_HANDLER_TYPE_THREADS`). The responses of each service are received in the thread of its connection. The packets are routed with a complete `send` under the write mutex of the socket, so the packets of different clients never mix in the connection of a service. A route whose send times out ends that connection, like any send of cerver (see [[Sockets]]).
 
 ## Usage
 
