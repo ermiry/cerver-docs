@@ -48,7 +48,7 @@ Every send of a packet or a file locks the **write mutex** of the socket of the 
 
 - `MSG_NOSIGNAL` on every send, so a reset connection returns `EPIPE` instead of raising `SIGPIPE` (and `cerver_start ()` ignores `SIGPIPE` too, see [[Cerver]]);
 - `MSG_DONTWAIT` and a wait with `poll ()` while the socket is full, so the deadline also holds in a blocking socket;
-- the deadline is the send timeout of the cerver (`cerver_set_send_timeout ()`, 32 seconds) or of the connection: a client that never reads can not keep a thread blocked forever;
+- the deadline is the send timeout of the cerver (`cerver_set_send_timeout ()`, 32 seconds) or of the connection: a client that never reads can not keep a thread blocked forever, and a send that reaches it ends the connection, so the next sends fail at once;
 - the files go with `sendfile ()`, in the free space of the send buffer.
 
 ## Limits that protect a cerver
@@ -60,12 +60,13 @@ Every send of a packet or a file locks the **write mutex** of the socket of the 
 | Bad packets | `cerver_set_max_bad_packets ()` | A peer that only sends garbage |
 | Authentication | `cerver_set_on_hold_timeout ()`, the tries of `cerver_set_auth ()` | A connection that never authenticates |
 | Inactive clients | `cerver_set_inactive_clients ()` | Connections that stay open without traffic |
-| Send deadline | `cerver_set_send_timeout ()` | A client that does not read |
+| Send deadline | `cerver_set_send_timeout ()` | A client that does not read: its connection is ended |
 
 ## Ending a connection
 
 - **The client closes:** the next `recv ()` returns 0, and the connection is removed, with `CERVER_EVENT_CLIENT_CLOSE_CONNECTION` (and `CERVER_EVENT_CLIENT_DISCONNECTED` for the last connection of a client).
 - **The cerver closes it:** a bad packet limit, an inactive client, a drop from a handler (`connection_drop_request ()`): the socket is shut down first, so the receive thread wakes up and removes the connection; it is never closed with its write mutex taken.
+- **A send times out:** the socket is shut down, and the receive thread removes the connection.
 - **The cerver ends:** the teardown sends `CERVER_PACKET_TYPE_TEARDOWN` to every client, then shuts their sockets down and drains the work in progress (see [[Lifecycle]]).
 
 ## The client side
