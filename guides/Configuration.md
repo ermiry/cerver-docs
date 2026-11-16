@@ -30,7 +30,7 @@ Every setter of cerver with its default, in one place. Each one is described in 
 | `cerver_set_update ()`, `cerver_set_update_interval ()` | Off | [[Cerver]] |
 | `cerver_set_alias ()` | `"my-cerver"` | [[Cerver]] |
 | `cerver_set_welcome_msg ()` | None | [[Cerver]] |
-| `cerver_stats_set_threshold_time ()` | A day | [[Cerver]] |
+| `cerver_stats_set_threshold_time ()` | 0, never reset | [[Cerver]] |
 | `cerver_set_app_handlers ()`, `cerver_set_custom_handler ()` | None | [[Handlers]] |
 | `cerver_set_app_handler_delete ()` and the others | `true` | [[Handlers]] |
 | `cerver_set_multiple_handlers ()` | Off | [[Handlers]] |
@@ -63,13 +63,13 @@ Every setter of cerver with its default, in one place. Each one is described in 
 | Setter | Default | Page |
 |---|---|---|
 | `cerver_set_admin_enable ()` | Off | [[Admin]] |
-| `admin_cerver_set_max_admins ()` | 1 | [[Admin]] |
-| `admin_cerver_set_max_admin_connections ()` | 2 | [[Admin]] |
+| `admin_cerver_set_max_admins ()` | 1; 0 is no limit | [[Admin]] |
+| `admin_cerver_set_max_admin_connections ()` | 2; 0 is no limit | [[Admin]] |
 | `admin_cerver_set_bad_packets_limit ()` | 4 | [[Admin]] |
 | `admin_cerver_set_receive_buffer_size ()` | 4096 bytes | [[Admin]] |
 | `admin_cerver_set_max_fds ()` | 4 | [[Admin]] |
 | `admin_cerver_set_poll_timeout ()` | 2000 ms | [[Admin]] |
-| `admin_cerver_set_check_packets ()` | `false` | [[Admin]] |
+| `admin_cerver_set_check_packets ()` | `false`, independent of `cerver_set_check_packets ()` | [[Admin]] |
 
 ## A client and its connections
 
@@ -108,7 +108,7 @@ Every setter of cerver with its default, in one place. Each one is described in 
 
 ## `config.h`
 
-`#include <cerver/config.h>`, that every header includes, defines `_GNU_SOURCE` and `_XOPEN_SOURCE 700`, and these macros:
+`#include <cerver/config.h>`, that every header includes, defines `_GNU_SOURCE` and `_XOPEN_SOURCE 700` when they are not defined. They only work before the first system header, and most headers of cerver include theirs before `config.h`, so a program is built with `-D _GNU_SOURCE`; without it `config.h` stops the build with an `#error`. It also defines these macros:
 
 | Macro | What it is |
 |---|---|
@@ -120,7 +120,7 @@ Every setter of cerver with its default, in one place. Each one is described in 
 | `CERVER_ZERO_INITIALIZER` | `{ 0 }` in C and `{ }` in C++: a struct set to zero without warnings in both |
 | `CERVER_PRINTF_FORMAT (format, first)` | Makes the compiler check the arguments against a `printf` format |
 | `CERVER_ATTRS (x)` | `__attribute__ (x)` with gcc and clang |
-| `DEPRECATED (func)` | Marks a function as deprecated |
+| `DEPRECATED (func)` | Marks a function as deprecated, so the compiler warns when it is used; the deprecated functions go away in the 3.0 |
 | `MIN (a, b)`, `MAX (a, b)` | |
 | `ARRAY_SIZE (a)`, `ARRAY_ELEM_AT (a, i, v)` | The elements of an array, and the element `i` or `v` when it is out of range |
 

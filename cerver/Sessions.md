@@ -1,6 +1,6 @@
 # Sessions
 
-`#include <cerver/sessions.h>`, `cerver_set_sessions ()` of `#include <cerver/cerver.h>`, and the session id of `#include <cerver/client.h>`.
+`#include <cerver/auth/sessions.h>`, `cerver_set_sessions ()` of `#include <cerver/cerver.h>`, and the session id of `#include <cerver/client/client.h>`.
 
 A session lets a client have several connections with the same cerver, like the same user on different devices or a client that opens a second connection for its files. The first connection authenticates with its credentials and gets a **session token**; the next ones authenticate with the token and join the same `Client` on the cerver. Sessions need [[Auth]].
 
@@ -11,7 +11,7 @@ A session lets a client have several connections with the same cerver, like the 
 1. A cerver with `cerver_set_auth ()` and `cerver_set_sessions ()` authenticates a first connection with its credentials, creates a client, and generates its **session id** with the session id generator.
 2. The `AUTH_PACKET_TYPE_SUCCESS` packet carries the session id as a `SessionToken`, and the client keeps it (`client_get_session_id ()`).
 3. A new connection sets the token with `connection_set_auth_token ()`, so it authenticates with it (`AUTH_PACKET_TYPE_CLIENT_TOKEN`) instead of the credentials.
-4. The cerver finds the client of the token (`client_get_by_session_id ()`), adds the connection to it and triggers `CERVER_EVENT_CLIENT_NEW_CONNECTION`. An unknown token is a failed authentication (`CERVER_AUTH_ERROR_INVALID_SESSION`).
+4. The cerver finds the client of the token (`client_get_with_session_id ()`), adds the connection to it and triggers `CERVER_EVENT_CLIENT_NEW_CONNECTION`. An unknown token is a failed authentication (`CERVER_AUTH_ERROR_INVALID_SESSION`).
 
 A client of the cerver stays while it has connections: `CERVER_EVENT_CLIENT_CLOSE_CONNECTION` for each one that closes, and `CERVER_EVENT_CLIENT_DISCONNECTED` when the last one does.
 
@@ -74,10 +74,10 @@ Sets the session id of a client. Cerver sets it on both sides; an application on
 
 - **Returns** 0 on success, 1 on error.
 
-#### `client_get_by_session_id ()`
+#### `client_get_with_session_id ()`
 
 ``` c
-Client *client_get_by_session_id (Cerver *cerver, const char *session_id);
+Client *client_get_with_session_id (Cerver *cerver, const char *session_id);
 ```
 
 Returns the client of a cerver with a session id, or `NULL`. The cerver must use sessions.

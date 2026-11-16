@@ -1,6 +1,6 @@
 # Clients
 
-`#include <cerver/client.h>`
+`#include <cerver/client/client.h>`
 
 A `Client` has two roles with the same structure:
 
@@ -107,7 +107,7 @@ void client_set_app_handlers (Client *client, Handler *app_handler, Handler *app
 void client_set_custom_handler (Client *client, Handler *custom_handler);
 ```
 
-Set the handlers of the `PACKET_TYPE_APP`, `PACKET_TYPE_APP_ERROR` and `PACKET_TYPE_CUSTOM` packets that the connections of the client receive. The client owns them, and deletes the packets after them (see [[Handlers]]).
+Set the handlers of the `PACKET_TYPE_APP`, `PACKET_TYPE_APP_ERROR` and `PACKET_TYPE_CUSTOM` packets that the connections of the client receive. The client owns them: a different handler deletes the one that was set (the same one again is kept). It deletes the packets after them (see [[Handlers]]).
 
 #### `client_set_max_received_packet_size ()`
 
@@ -308,10 +308,10 @@ Returns `true` while the client has started connections.
 
 ### The clients of a cerver
 
-#### `client_get_by_sock_fd ()`
+#### `client_get_with_sock_fd ()`
 
 ``` c
-Client *client_get_by_sock_fd (Cerver *cerver, i32 sock_fd);
+Client *client_get_with_sock_fd (Cerver *cerver, i32 sock_fd);
 ```
 
 Returns the client of a cerver with a connection of the socket, or `NULL`.
@@ -334,15 +334,15 @@ Closes a connection of a client of a cerver, removes it from the client and dele
 
 - **Returns** 0 on success, 1 on error.
 
-#### `client_remove_connection_by_sock_fd ()`
+#### `client_remove_connection_with_sock_fd ()`
 
 ``` c
-ClientConnectionsStatus client_remove_connection_by_sock_fd (Cerver *cerver, Client *client, const i32 sock_fd);
+ClientConnectionsStatus client_remove_connection_with_sock_fd (Cerver *cerver, Client *client, const i32 sock_fd);
 ```
 
 Drops the connection of a socket, and the client if it has no connections left.
 
-- **Returns** `CLIENT_CONNECTIONS_STATUS_ONE` if the client still has a connection, `DROPPED` if it was dropped, or `ERROR`.
+- **Returns** `CLIENT_CONNECTIONS_STATUS_DROPPED` when the connection (or the client) was dropped, or `ERROR` on error or when the connection does not belong to the client; the client is invalid after a `DROPPED` if it had one connection or none. `ONE` is never returned.
 
 #### `client_broadcast_to_all_avl ()`
 

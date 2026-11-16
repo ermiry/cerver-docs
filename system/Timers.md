@@ -1,13 +1,13 @@
 # Timers
 
-`#include <cerver/timer.h>`
+`#include <cerver/system/timer.h>`
 
 Clocks, elapsed times, sleeps and the texts of dates and times.
 
 ## Concepts
 
 - `timer_get_timespec ()` reads `CLOCK_MONOTONIC_RAW`, that never jumps, for measuring; `timer_get_current_time ()` reads the time of the day, in seconds with microseconds.
-- **`timer_get_gmt_time ()` and `timer_get_local_time ()` return the static buffer of `gmtime ()` and `localtime ()`**: they are not thread safe, and the next call overwrites the result. Copy it right away, or use `gmtime_r ()` in code that runs in several threads.
+- **`timer_get_gmt_time ()` and `timer_get_local_time ()` are deprecated** (`DEPRECATED ()`, not reentrant): they return the static buffer of `gmtime ()` and `localtime ()`, and the next call overwrites the result. Use `timer_get_gmt_time_r ()` and `timer_get_local_time_r ()`, which write in a `struct tm` of the caller.
 
 ## Usage
 
@@ -21,7 +21,8 @@ cerver_log_msg ("took %f seconds", timer_elapsed_time (start, end));
 timespec_delete (start);
 timespec_delete (end);
 
-String *now = timer_date_and_time_to_string (timer_get_local_time ());
+struct tm now_time;
+String *now = timer_date_and_time_to_string (timer_get_local_time_r (&now_time));
 str_delete (now);
 ```
 
@@ -38,11 +39,14 @@ double timer_get_current_time (void);
 A new reading of the monotonic clock and its release, the seconds between two readings, a sleep of fractional seconds, and the time of the day in seconds.
 
 ``` c
+struct tm *timer_get_gmt_time_r (struct tm *result);
+struct tm *timer_get_local_time_r (struct tm *result);
+
 struct tm *timer_get_gmt_time (void);
 struct tm *timer_get_local_time (void);
 ```
 
-The current time in UTC and in local time (see the warning above).
+The current time in UTC and in local time. The `_r` ones write it in `result`, safe from any thread, and return `result`, or `NULL` for a `NULL` result or on error; the other two are deprecated (see above).
 
 ``` c
 void timer_time_to_string_actual (const struct tm *timeinfo, char *buffer);

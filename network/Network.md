@@ -1,6 +1,6 @@
 # Network
 
-`#include <cerver/network.h>`
+`#include <cerver/network/network.h>`
 
 The addresses of cerver, in IPv4 and IPv6: resolving host names, parsing literal addresses with their zones, printing and comparing them, and the options of a socket. Cervers and clients use them for every bind and connect; an application uses them to work with the addresses of its connections.
 

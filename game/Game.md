@@ -116,7 +116,7 @@ The default id of a lobby: the hash of its creation time and a counter, so the l
 void game_set_player_comparator (GameCerver *game_cerver, Comparator player_comparator);
 ```
 
-Sets how the players of the lobbies are compared (see [[Players]]).
+**Deprecated** (it goes away in the 3.0): cerver does not use it; the players of each lobby are compared by the ids of their clients (see [[Players]]).
 
 #### `game_set_load_game_data ()`
 
@@ -190,16 +190,16 @@ Sends a game request with its object to the game cerver of the connection.
 | Type | What it is |
 |---|---|
 | `GameCerver` | The lobbies, the game types, the lock, the data of the game and the stats of a game cerver |
-| `GameCerverStats` | `current_active_lobbys`, `lobbys_created` |
+| `GameCerverStats` | `current_active_lobbys`, `lobbys_created` (written with `__atomic`) |
 | `LobbyPlayer` | A `lobby` and a `player`, what the `init` of a game type gets |
 
 ## Constants
 
 | Constant | Value | What it is |
 |---|---|---|
-| `GAME_DEFAULT_PLAYER_TIMEOUT` | 30 | |
-| `GAME_DEFAULT_FPS` | 20 | |
-| `GAME_DEFAULT_MIN_PLAYERS`, `GAME_DEFAULT_MAX_PLAYERS` | 2, 4 | |
+| `GAME_DEFAULT_PLAYER_TIMEOUT` | 30 | Deprecated: cerver does not use it, it goes away in the 3.0 |
+| `GAME_DEFAULT_FPS` | 20 | Deprecated: the game types have their own value |
+| `GAME_DEFAULT_MIN_PLAYERS`, `GAME_DEFAULT_MAX_PLAYERS` | 2, 4 | Deprecated: the lobbies use `LOBBY_DEFAULT_MAX_PLAYERS` |
 
 ## See also
 

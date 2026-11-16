@@ -22,7 +22,7 @@ A connection that connects, sends packets and closes allocates very little, beca
 | Threads | One | One per connection being received |
 | Memory per connection | An entry of the poll array | A thread and its stack |
 | A slow handler | Delays every connection, unless it has a queue | Only delays its connection |
-| A slow client | Its blocking sends delay every connection, up to the send timeout | Only delays its thread |
+| A slow client | Its blocking sends delay every connection, up to the send timeout; then its connection is ended | Only delays its thread, up to the send timeout |
 | Best for | Many connections, short work, handlers with queues | Fewer connections, work in the handlers |
 
 The event loop of the 2.1 line removes these trade offs; in the 1.x, choose by the work of the handlers.

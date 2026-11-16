@@ -1,6 +1,6 @@
 # Migration
 
-What changes for an application that moves from cerver 1.7 to 1.8, from 1.8 to 1.8.1, and from 1.8.1 to 1.8.2. The complete list of every beta, with the details of each change, is [`incompatibilities.md`](https://github.com/ermiry/cerver/blob/master/incompatibilities.md) in the repository.
+What changes for an application that moves from cerver 1.7 to 1.8, from 1.8 to 1.8.1, from 1.8.1 to 1.8.2, and from 1.8.2 to 1.9. The complete list of every beta, with the details of each change, is [`incompatibilities.md`](https://github.com/ermiry/cerver/blob/master/incompatibilities.md) in the repository.
 
 ## From 1.7 to 1.8
 
@@ -63,6 +63,33 @@ The protocol and the ABI do not change: a 1.8.2 talks with a 1.8.1, and a progra
 - **`va_copy`** always comes from `<stdarg.h>`, that `config.h` includes.
 - **`cerver_udp_peers_count ()`**: a peer that it does not count anymore is already out of the stats of the cerver.
 - **New:** the canonical base64url of [[Base64]] and `CERVER_HIDDEN` (see [[Configuration]]).
+
+## From 1.8.2 to 1.9
+
+The protocol does not change: a 1.9 talks with a 1.8.2. Every include and some structs do, so a program is built again.
+
+### Building
+
+- **Every header changes its path:** the headers are in folders by module (`core/`, `admin/`, `auth/`, `client/`, `connection/`, `files/`, `handler/`, `load/`, `network/`, `packets/`, `system/`), e.g. `cerver/client.h` is `cerver/client/client.h` and `cerver/socket.h` is `cerver/network/socket.h`; `cerver/config.h` and `cerver/version.h` stay on top. A big header is split in parts that its main header does not include (`cerver_start ()` is in `cerver/core/start.h`), and `<cerver/cerver.h>` is the umbrella that includes them all.
+- **A program is built with `-D _GNU_SOURCE`:** `config.h` stops the build with an `#error` without it (gcc and clang do not define it, g++ does). See [[Building]].
+- **The functions with `_by_` are named with `_with_`:** `client_get_with_sock_fd ()`, `lobby_search_with_id ()`, `dlist_remove_with_condition ()`, `files_image_get_type_with_extension ()` and the others.
+- The license is Apache-2.0.
+
+### Behaviour
+
+- **A send that times out ends its connection:** a peer that does not read in all the send timeout gets a part of a packet, so its socket is shut down; the next sends fail at once with `EPIPE` (see [[Sockets]]).
+- **A cerver accepts 1 admin by default:** a second one is rejected unless `admin_cerver_set_max_admins ()` raises the limit (0 is no limit); the admins have their own `admin_cerver_set_check_packets ()` (see [[Admin]]).
+- **The setters free what they replace:** `cerver_set_app_handlers ()`, `cerver_set_custom_handler ()`, the ones of the admin and of the client, and `connection_set_received_data ()` delete the handler or the data that they replace when it is a different one; a program that deleted the old one deletes it twice.
+- **An upload without an uploads path is rejected:** the client gets a `CERVER_ERROR_SEND_FILE` and its connection is ended (see [[Files]]). A file whose receive fails is removed.
+- **The arguments of events and errors are shared** with the data of each trigger: an action that is replaced or unregistered while a trigger still runs keeps its arguments until that trigger deletes its data (see [[Events]]).
+- **`cerver_shutdown ()`** stops with a pipe (`Cerver::stop_pipe`), async-signal-safe without `CERVER_DEBUG` (see [[Lifecycle]]).
+- `str_set ()` grows a string of `str_new ()`, and `str_split ()` of a string without the delimiter gives the whole string; `files_create_dir ()` of a directory that exists returns 0; `file_n_read ()` sets `n_read`; a BMP is found by its bytes; `job_queue_request ()` takes several threads at the same time.
+
+### API
+
+- **New:** `cerver/crypto/random.h`, `c_string_copy_bounded ()`, `dlist_get_apply ()`, `htab_get_apply ()`, `avl_get_node_data_apply ()`, `lobby_get_reference ()`, `lobby_search_with_id_reference ()`, `timer_get_gmt_time_r ()`, `timer_get_local_time_r ()` and `thpool_has_queued ()`.
+- **Deprecated** (with `DEPRECATED ()`, they go away in the 3.0): `cerver_set_sockets_pool_init ()`, `game_set_player_comparator ()`, `lobby_stats_set_threshold_time ()`, `lobby_get ()` and `lobby_search_with_id ()` (they return a lobby without a reference), `timer_get_gmt_time ()` and `timer_get_local_time ()`.
+- **The structs change:** `Cerver` has `stop_pipe` and no `auth_packet`, `JobQueue` has `requests`, `Thpool` has `queue_awaited` and its waiter, and the events, the errors and their data have `shared_args`.
 
 ## See also
 

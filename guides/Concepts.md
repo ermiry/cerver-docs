@@ -7,14 +7,14 @@ The pieces of cerver, how a packet travels through them, and the rules of memory
 | Piece | Header | What it is |
 |---|---|---|
 | **Cerver** | `cerver/cerver.h` | A server: a listening socket (TCP) or a bound socket (UDP), its clients, its handlers, its threads and its configuration |
-| **Client** | `cerver/client.h` | On the side of a cerver, a remote peer with one or more connections. On the side of an application, the object that connects to cervers. Both are the same `Client` structure |
-| **Connection** | `cerver/connection.h` | A socket of a client, with its receive buffer, its state, its stats and, on the client side, its send queue and its reconnection |
-| **Packet** | `cerver/packets.h` | A message of the cerver protocol: a 32 bytes header and its data |
-| **Handler** | `cerver/handler.h` | A function of the application that gets the packets of a type, directly in the thread that received them or in its own thread with a queue |
-| **Event** | `cerver/events.h` | A function of the application that runs when something happens, like a client that connects or a cerver that starts |
-| **Error** | `cerver/errors.h` | A `PACKET_TYPE_ERROR` packet that a cerver sends to a client, and the function that a client runs when it gets one |
-| **Admin** | `cerver/admin.h` | A dedicated connection to monitor and control a cerver |
-| **Balancer** | `cerver/balancer.h` | A cerver that forwards the packets of its clients to its services, other cervers |
+| **Client** | `cerver/client/client.h` | On the side of a cerver, a remote peer with one or more connections. On the side of an application, the object that connects to cervers. Both are the same `Client` structure |
+| **Connection** | `cerver/connection/connection.h` | A socket of a client, with its receive buffer, its state, its stats and, on the client side, its send queue and its reconnection |
+| **Packet** | `cerver/packets/packets.h` | A message of the cerver protocol: a 32 bytes header and its data |
+| **Handler** | `cerver/handler/handler.h` | A function of the application that gets the packets of a type, directly in the thread that received them or in its own thread with a queue |
+| **Event** | `cerver/handler/events.h` | A function of the application that runs when something happens, like a client that connects or a cerver that starts |
+| **Error** | `cerver/handler/errors.h` | A `PACKET_TYPE_ERROR` packet that a cerver sends to a client, and the function that a client runs when it gets one |
+| **Admin** | `cerver/admin/admin.h` | A dedicated connection to monitor and control a cerver |
+| **Balancer** | `cerver/load/balancer.h` | A cerver that forwards the packets of its clients to its services, other cervers |
 
 ## Cerver types
 
@@ -72,7 +72,7 @@ A cerver has a handler for `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR` (`cerve
 
 ## Rules of memory
 
-- **A cerver, a client or a handler is owned by whoever created it until it is given away.** A handler given to a cerver or a client with a setter belongs to it, and it is deleted in its teardown. An event keeps its arguments, and deletes them with the `delete_action_args` that it was registered with.
+- **A cerver, a client or a handler is owned by whoever created it until it is given away.** A handler given to a cerver or a client with a setter belongs to it, and it is deleted in its teardown, or when a setter replaces it with a different one. An event keeps its arguments, and deletes them with the `delete_action_args` that it was registered with once the event and every trigger that still runs are done with them.
 - **A received packet belongs to cerver.** It is deleted after the handler returns, unless `cerver_set_app_handler_delete (cerver, false)` (and the setters of the other types) says that the application deletes it. Its data is only valid while the handler runs: copy what has to live longer.
 - **A packet that the application creates** with `packet_create ()` and the others is deleted by the application with `packet_delete ()` after it is sent.
 - **The data of an event** (`CerverEventData`, `ClientEventData`) is created for each trigger and released by the action with `cerver_event_data_delete ()` or `client_event_data_delete ()`.
@@ -82,7 +82,7 @@ A cerver has a handler for `PACKET_TYPE_APP` and `PACKET_TYPE_APP_ERROR` (`cerve
 
 - **The configuration is set before `cerver_start ()`**, from a single thread; the setters are not synchronized.
 - **The handlers must be thread safe** with `CERVER_HANDLER_TYPE_THREADS`, or when they are direct handlers of a client with many connections: the same action runs in several threads at once.
-- **`cerver_shutdown ()`** can be called from any thread or from a signal handler.
+- **`cerver_shutdown ()`** can be called from any thread, and from a signal handler in a build without `CERVER_DEBUG`.
 - **The stats** are updated with atomics from many threads; read them with `CERVER_STATS_GET ()` or with the getters, like `cerver_get_request_stats ()`.
 - **A slow direct handler** blocks the thread that receives: with `CERVER_HANDLER_TYPE_POLL`, every connection waits for it. Use a handler with a queue for slow work.
 - **Sending** locks the write mutex of the socket of the connection, so packets from different threads never mix in the same connection.

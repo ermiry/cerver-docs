@@ -28,7 +28,7 @@ bsem *bsem_new (void);
 void bsem_delete (void *bsem_ptr);
 ```
 
-Allocate a semaphore with its mutex and condition, and destroy and release it.
+Allocate a semaphore without its mutex and condition (`bsem_init ()` creates them), and destroy and release it.
 
 #### `bsem_init ()`, `bsem_reset ()`
 
@@ -37,7 +37,7 @@ void bsem_init (bsem *bsem_p, int value);
 void bsem_reset (bsem *bsem_p);
 ```
 
-Set the value to 1 or 0, and back to 0, keeping its mutex and condition.
+`bsem_init ()` allocates the mutex and the condition and sets the value to 0 or 1. Without memory, or with another value, the semaphore has neither, and its post and its wait do nothing. `bsem_reset ()` sets it back to 0, keeping them.
 
 #### `bsem_post ()`, `bsem_post_all ()`
 

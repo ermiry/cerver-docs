@@ -1,6 +1,6 @@
 # Connections
 
-`#include <cerver/connection.h>`
+`#include <cerver/connection/connection.h>`
 
 A `Connection` is a socket of a [[Clients]]: on a cerver, an accepted connection of a remote client; in an application, a connection to a cerver, with the values to connect, the thread that receives its packets, its authentication, an optional send queue and its reconnection. This page has the configuration of the connections that an application creates with `client_connection_create ()`.
 
@@ -18,7 +18,7 @@ A started connection has an **update thread**: it receives with blocking `recv (
 
 `packet_send_to ()` sends right away, in the calling thread, locking the write mutex of the socket. With `connection_set_send_queue ()`, `connection_send_packet ()` queues the packet instead, and a dedicated thread sends it and deletes it: the caller never waits for the socket. A packet given to `connection_send_packet ()` belongs to the connection from then on.
 
-A send to a socket that is full waits up to `connection_set_send_timeout ()` seconds (`CERVER_DEFAULT_SEND_TIMEOUT`, 32) before it fails, so a cerver that does not read can not block the client forever.
+A send to a socket that is full waits up to `connection_set_send_timeout ()` seconds (`CERVER_DEFAULT_SEND_TIMEOUT`, 32) before it fails, so a cerver that does not read can not block the client forever. A send that times out ends the connection: its socket is shut down, the update thread ends it, and the next sends fail at once.
 
 ### Reconnecting
 
@@ -130,7 +130,7 @@ Sets the seconds that a `recv ()` of the update thread blocks before it checks i
 void connection_set_send_timeout (Connection *connection, u32 timeout);
 ```
 
-Sets the seconds that a send waits for space in a full socket before it fails; 0 uses `CERVER_DEFAULT_SEND_TIMEOUT`.
+Sets the seconds that a send waits for space in a full socket before it fails; 0 uses `CERVER_DEFAULT_SEND_TIMEOUT`. A send that times out ends the connection, so the next sends fail at once.
 
 #### `connection_set_send_queue ()`
 
@@ -166,7 +166,7 @@ Replaces how the update thread handles the bytes that it receives. The method ge
 void connection_set_received_data (Connection *connection, void *data, size_t data_size, Action data_delete);
 ```
 
-Keeps data in the connection, like the response of a request, released with `data_delete` when the connection is deleted. Setting it again does not release the previous data.
+Keeps data in the connection, like the response of a request, released with `data_delete` when the connection is deleted or reset. Different data releases the data that was set with its own delete method, and the same data again is kept.
 
 #### `connection_set_attempt_reconnect ()`
 
@@ -275,7 +275,7 @@ Allocate and print the stats of a connection: receives, packets and bytes, and t
 | `CONNECTION_DEFAULT_UPDATE_TIMEOUT` | 2 | Seconds of each `recv ()` of the update thread |
 | `CONNECTION_DEFAULT_RECONNECT_WAIT_TIME` | 30 | Seconds before a reconnection |
 | `CONNECTION_DEFAULT_MAX_AUTH_TRIES` | 2 | The authentication tries |
-| `CONNECTION_DEFAULT_BAD_PACKETS` | 4 | |
+| `CONNECTION_DEFAULT_BAD_PACKETS` | 4 | Deprecated: not used, the limits are the ones of the cerver (`cerver_set_max_bad_packets ()`); it goes away in the 3.0 |
 | `CONNECTION_DATAGRAM_TOKEN_SIZE` | 16 | The token of an authenticated UDP connection |
 
 ## See also

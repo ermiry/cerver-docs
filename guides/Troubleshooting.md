@@ -10,7 +10,9 @@ Common problems and how to solve them.
 
 **A `%ld` with a `u64` does not build.** The functions with a format are checked by the compiler; with `WERROR=1` the warning is an error. Use `%lu` with a cast, or `PRIu64`.
 
-**It does not build on macOS.** Cerver builds in Linux, natively or in Docker (see [[Building]]); the macOS port is planned for cerver 1.9.
+**It does not build on macOS.** Cerver builds in Linux, natively or in Docker (see [[Building]]); the macOS port is planned for cerver 1.9.1.
+
+**`cerver needs _GNU_SOURCE before any system header`.** Build your program with `-D _GNU_SOURCE`: gcc and clang do not define it (see [[Building]]).
 
 ## Starting
 
@@ -19,6 +21,8 @@ Common problems and how to solve them.
 **`Failed to bind cerver socket`.** The port is in use, or it was just released: stop the other process, or use `cerver_set_reusable_address_flags (cerver, true)` to bind right after a restart. Ports below 1024 need privileges.
 
 **A UDP cerver with admins fails to start.** A UDP cerver can not have admins (see [[UDP]]).
+
+**A second admin is rejected.** A cerver accepts 1 admin by default: raise it with `admin_cerver_set_max_admins ()`, 0 is no limit (see [[Admin]]).
 
 ## Connecting
 
@@ -34,7 +38,7 @@ Common problems and how to solve them.
 
 **The process dies with `SIGPIPE`.** A send to a connection that the client reset raised it. `cerver_start ()` ignores `SIGPIPE` by default; check that the process did not set a handler that kills it, or that the sends are not done outside of cerver without `MSG_NOSIGNAL`.
 
-**Every connection waits when one client is slow.** With `CERVER_HANDLER_TYPE_POLL`, a slow direct handler, or a client that does not read, blocks the only thread. Give the slow handlers a queue, or use threads (see [[Performance]]).
+**Every connection waits when one client is slow.** With `CERVER_HANDLER_TYPE_POLL`, a slow direct handler, or a client that does not read, blocks the only thread (a client that does not read, up to the send timeout: then its connection is ended). Give the slow handlers a queue, or use threads (see [[Performance]]).
 
 **A crash in a handler with a queue.** A handler with a queue gets a `HandlerData *`, not the `Packet *`: the packet is `handler_data->packet` (see [[Handlers]]).
 

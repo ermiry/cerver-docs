@@ -135,13 +135,13 @@ Keep the settings and the data of the game in the lobby, released with their del
 
 ### Search
 
-#### `lobby_search_by_id ()`
+#### `lobby_search_with_id ()`
 
 ``` c
-Lobby *lobby_search_by_id (Cerver *cerver, const char *id);
+Lobby *lobby_search_with_id (Cerver *cerver, const char *id);
 ```
 
-Returns the lobby of a game cerver with the id, with the lock of the game cerver, or `NULL`.
+**Deprecated** (`DEPRECATED ()`, it goes away in the 3.0): returns the lobby of a game cerver with the id, found with the lock of the game cerver, or `NULL`, but without a reference, so the lobby can be released after the lock is released. Use `lobby_search_with_id_reference ()`.
 
 #### `lobby_get ()`
 
@@ -149,7 +149,16 @@ Returns the lobby of a game cerver with the id, with the lock of the game cerver
 Lobby *lobby_get (GameCerver *game_cerver, Lobby *query);
 ```
 
-Returns the lobby that compares equal to `query` (by its id), with a reference that the caller releases with `lobby_release ()`, or `NULL`.
+**Deprecated**: returns the lobby that compares equal to `query` (by its id), **without a reference**, so it can be released after the lock is released. Use `lobby_get_reference ()`.
+
+#### `lobby_get_reference ()`, `lobby_search_with_id_reference ()`
+
+``` c
+Lobby *lobby_get_reference (GameCerver *game_cerver, Lobby *query);
+Lobby *lobby_search_with_id_reference (Cerver *cerver, const char *id);
+```
+
+Return the lobby with a reference taken with the lock of the game cerver, which the caller releases with `lobby_release ()`, or `NULL` (since 1.9).
 
 #### `lobby_player_of_client ()`
 
@@ -238,7 +247,7 @@ void lobby_stats_print (Lobby *lobby);
 void lobby_stats_set_threshold_time (Lobby *lobby, time_t threshold_time);
 ```
 
-Print the packets, receives and bytes of the lobby, and set how often they are reset.
+Print the packets, receives and bytes of the lobby. `lobby_stats_set_threshold_time ()` is deprecated: the value is only stored and printed, and only the stats of the cerver are reset (`cerver_stats_set_threshold_time ()`).
 
 ## Objects
 
@@ -260,7 +269,7 @@ The objects of the requests and answers, as schemas of the [[Serializer]]:
 | `Lobby` | A lobby: `id`, its references, its state, `players`, `owner`, its counts, its handler, packet handler and update, its `game_type`, settings and data, and its `stats` |
 | `CerverLobby` | What the handler and the update get: `cerver`, `lobby` |
 | `GameSettings` | `game_type`, `player_timeout`, `fps`, `min_players`, `max_players`, `duration` |
-| `LobbyStats` | The packets, receives and bytes of a lobby |
+| `LobbyStats` | The packets, receives and bytes of a lobby; its `threshold_time` is deprecated |
 
 ## Constants
 

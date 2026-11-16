@@ -1,6 +1,6 @@
 # Gametypes
 
-`#include <cerver/game/gametype.h>`
+`#include <cerver/game/types.h>`
 
 A game type describes a game that the [[lobbies|Lobby]] of a game cerver can play: its name, what to do when a game starts and ends, how its lobbies are configured, and the callbacks of its players. A client asks for a lobby of a game type by its name (see [[Game]]).
 
@@ -77,12 +77,12 @@ void game_type_set_fps (GameType *game_type, const u32 fps);
 
 Set the timeout of the players (`GAME_TYPE_DEFAULT_PLAYER_TIMEOUT`, 0: never) and the frames per second of the update (`GAME_TYPE_DEFAULT_FPS`, 20; 0 is ignored).
 
-#### `game_type_register ()`, `game_type_unregister ()`, `game_type_get_by_name ()`
+#### `game_type_register ()`, `game_type_unregister ()`, `game_type_get_with_name ()`
 
 ``` c
 int game_type_register (DoubleList *game_types, GameType *game_type);
 int game_type_unregister (DoubleList *game_types, const char *name);
-GameType *game_type_get_by_name (DoubleList *game_types, const char *name);
+GameType *game_type_get_with_name (DoubleList *game_types, const char *name);
 ```
 
 Add a game type to the game types of a game cerver (`game_cerver->game_types`), remove it by its name, and find it by its name. Register them before the cerver starts. The two first return 0 on success, 1 on error; the last one returns `NULL` when it is not there.

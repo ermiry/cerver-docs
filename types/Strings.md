@@ -54,7 +54,7 @@ void str_copy (String *to, const String *from);
 void str_n_copy (String *to, const String *from, const size_t n);
 ```
 
-Replace the contents with a format, a C string, its first `n` bytes, or another string.
+Replace the contents with a format, a C string, its first `n` bytes, or another string. `str_set ()` writes a format: a string with a `max_len` (`str_allocate ()`, `str_reserve ()`) is written in its room, cut to `max_len - 2` characters; the others (`str_new ()`, `str_create ()`) grow to the size of the value (before 1.9 they were not changed), and keep their value if it can not be allocated.
 
 ### Grow
 
@@ -90,7 +90,7 @@ void str_remove_last_char (String *string);
 char **str_split (String *string, const char delim, int *n_tokens);
 ```
 
-Change the case, remove every appearance of a character or the last character, and split by a delimiter into a new array of new C strings, with their count; the caller releases each one and the array with `free ()`.
+Change the case, remove every appearance of a character or the last character, and split by a delimiter into a new array of new C strings, with their count; the caller releases each one and the array with `free ()`. The empty tokens are skipped, and a string without the delimiter is its only token (it gave none before 1.9); `NULL` for a string of less than 2 characters or of only delimiters.
 
 ## Types
 

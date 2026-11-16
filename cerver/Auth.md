@@ -1,6 +1,6 @@
 # Auth
 
-`#include <cerver/auth.h>`, the authentication setters of `#include <cerver/cerver.h>`, and the auth data of `#include <cerver/connection.h>`.
+`#include <cerver/auth/auth.h>`, the authentication setters of `#include <cerver/cerver.h>`, and the auth data of `#include <cerver/connection/connection.h>`.
 
 A cerver can require each new connection to authenticate before it becomes a client. Until then the connection is **on hold**: a dedicated thread receives it, and only its authentication packets are handled. The method that checks the credentials is the application's. With [[Sessions]], a client can then add more connections with the session token that it got.
 

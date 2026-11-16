@@ -1,6 +1,6 @@
 # UDP
 
-`#include <cerver/udp.h>`
+`#include <cerver/network/udp.h>`
 
 A cerver created with `PROTOCOL_UDP` receives datagrams instead of connections. Each datagram carries a single packet of the cerver [[Protocol]], and the cerver keeps a **peer** for each address that sends it valid datagrams: a logical connection, with its `Connection` and its `Client`, so the handlers, the events, the authentication and the sessions work like with TCP. The client side is the same `Client`, with a connection of `PROTOCOL_UDP`.
 

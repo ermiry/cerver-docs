@@ -172,6 +172,14 @@ unsigned int thpool_get_queue_size (Thpool *thpool);
 
 The threads that are running, the ones that are working in a job, the jobs that wait in the queue, and the size of the queue.
 
+#### `thpool_has_queued ()`
+
+``` c
+bool thpool_has_queued (const Thpool *thpool);
+```
+
+Whether a job waits in the queue, read without the mutex of the pool from an atomic count (`queue_awaited`), for a thread that asks it often; `false` for a `NULL` pool.
+
 #### `thpool_is_empty ()`, `thpool_is_full ()`
 
 ``` c
@@ -202,7 +210,8 @@ Returns the bucket of the histograms for a time in microseconds.
 
 | Type | What it is |
 |---|---|
-| `Thpool` | A pool: its name, its threads, its queue and its stats |
+| `Thpool` | A pool: its name, its threads, its queue and its stats, `queue_awaited` (1.9b-3), and the internal waiter (`waiter`, `num_threads_waiting`, `waiter_wakes`, 1.9); a binary that allocates a `Thpool` itself is built again |
+| `ThpoolWaiter`, `ThpoolWaited` | What the threads of a pool wait on when its queue is empty, for the internal methods of cerver (`thpool_set_waiter ()`); without one, the pool works as before |
 | `ThpoolJob` | `work`, `reject`, `args` and when it was queued |
 | `ThpoolStats` | `total_jobs`, `completed_jobs`, `rejected_jobs`, `dropped_jobs`, `waited_jobs`, `max_queued`, the total wait and run times, and their histograms |
 

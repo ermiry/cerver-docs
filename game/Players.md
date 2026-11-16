@@ -37,12 +37,12 @@ void player_set_data (Player *player, void *data, Action data_delete);
 
 Keeps data of the game in the player, released with `data_delete` when the player is deleted.
 
-#### `player_get_from_lobby ()`, `player_get_le_from_lobby ()`, `player_get_by_sock_fd_list ()`
+#### `player_get_from_lobby ()`, `player_get_le_from_lobby ()`, `player_get_with_sock_fd_list ()`
 
 ``` c
 Player *player_get_from_lobby (Lobby *lobby, Player *query);
 ListElement *player_get_le_from_lobby (Lobby *lobby, Player *player);
-Player *player_get_by_sock_fd_list (Lobby *lobby, i32 sock_fd);
+Player *player_get_with_sock_fd_list (Lobby *lobby, i32 sock_fd);
 ```
 
 Find a player of a lobby that compares equal to `query` with the comparator of the game cerver, the element of the list of a player, and the player with a connection of the socket. They return `NULL` when it is not there.
@@ -58,14 +58,14 @@ void player_broadcast_to_all (
 
 Sends a generated packet to every player of the lobby.
 
-#### `player_comparator_by_id ()`, `player_comparator_client_id ()`
+#### `player_comparator_with_id ()`, `player_comparator_client_id ()`
 
 ``` c
-int player_comparator_by_id (const void *a, const void *b);
+int player_comparator_with_id (const void *a, const void *b);
 int player_comparator_client_id (const void *a, const void *b);
 ```
 
-Compare two players by their ids, or by the ids of their clients; one of them is the comparator of the game cerver (`game_set_player_comparator ()`).
+Compare two players by their ids, or by the ids of their clients. The players of a lobby are compared by the ids of their clients; `game_set_player_comparator ()` is deprecated and not used.
 
 #### `player_activity_now ()`, `player_activity_update ()`
 

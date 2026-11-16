@@ -1,6 +1,6 @@
 # Building
 
-Cerver builds in Linux, with gcc 16.2 (the compiler of its CI), g++ or clang, and GNU `make`. It only links pthreads and libm, both in glibc. macOS is not supported yet: its port is planned for cerver 1.9.
+Cerver builds in Linux, with gcc 16.2 (the compiler of its CI), g++ or clang, and GNU `make`. It only links pthreads and libm, both in glibc. macOS is not supported yet: its port is planned for cerver 1.9.1.
 
 ## Dependencies
 
@@ -24,7 +24,7 @@ Cerver builds in Linux, with gcc 16.2 (the compiler of its CI), g++ or clang, an
 | `sudo make uninstall` | Removes both |
 | `make clean` | Removes the objects and the binaries of the library, the examples, the tests, the coverage and the benchmarks |
 
-After `make install`, run `sudo ldconfig` so the linker finds `libcerver.so`, and link your program with `-l cerver -l pthread`.
+After `make install`, run `sudo ldconfig` so the linker finds `libcerver.so`, build your program with `-D _GNU_SOURCE` and link it with `-l cerver -l pthread`. `config.h` stops the build with an `#error` without `_GNU_SOURCE`: g++ defines it, but gcc and clang do not, even with their gnu dialects.
 
 ## Options
 
@@ -32,7 +32,7 @@ Every option is a `make` variable, like `make TYPE=test SANITIZER=address -j4`:
 
 | Variable | Values | Default | What it does |
 |---|---|---|---|
-| `TYPE` | `development`, `test`, `beta`, `production` | `development` | `development` builds with `-g` and the debug logs and stats of every module (`CERVER_DEBUG`, `CERVER_STATS`, `CLIENT_DEBUG`, …). `test` builds with `-O2`, `-g`, `_FORTIFY_SOURCE` and the stack protector. `beta` builds with `-O2` and `-g`. Any other value, like `production`, builds with `-O2` and `_FORTIFY_SOURCE` |
+| `TYPE` | `development`, `test`, `beta`, `production` | `development` | `development` builds with `-g` and the debug logs and stats of every module (`CERVER_DEBUG`, `CERVER_STATS`, `CLIENT_DEBUG`, …); with `CERVER_DEBUG`, `cerver_shutdown ()` logs, so it is not async-signal-safe (see [[Lifecycle]]). `test` builds with `-O2`, `-g`, `_FORTIFY_SOURCE` and the stack protector. `beta` builds with `-O2` and `-g`. Any other value, like `production`, builds with `-O2` and `_FORTIFY_SOURCE` |
 | `CC` | `gcc`, `g++`, `clang` | `gcc` | The compiler; `g++` builds the library as C++ 11 |
 | `WERROR` | `0`, `1` | `0` | `1` turns every warning into an error, like the CI does |
 | `SANITIZER` | `address`, `undefined`, `thread`, or a list like `address,undefined` | empty | Builds with `-fsanitize`; it also disables the recycling of connections, sockets, clients and packets (`CERVER_RECYCLE_DISABLED`), so the sanitizers see every allocation |

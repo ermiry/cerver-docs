@@ -1,6 +1,6 @@
 # Events
 
-`#include <cerver/events.h>`, and the events of `#include <cerver/client.h>`.
+`#include <cerver/handler/events.h>`, and the events of `#include <cerver/client/client.h>`.
 
 An event runs a function of the application when something happens in a cerver or a client: a cerver that starts, a client that connects, a lobby that is created. The errors that a cerver and a client send to each other are in [[Errors]], and they are registered the same way.
 
@@ -14,18 +14,18 @@ Every event is registered with the same arguments, one action per event:
 |---|---|
 | `work` | A `Work`, `void *(*) (void *)`, called with a newly allocated `CerverEventData` or `ClientEventData` |
 | `work_args` | The arguments of the action, passed in the `action_args` of each data |
-| `delete_action_args` | How to release `work_args` when the action is unregistered, or with the data of a dropped trigger |
+| `delete_action_args` | How to release `work_args` once the event and every trigger that still uses them are done with them |
 | `create_thread` | `true` runs the action in a new thread; the teardown of the cerver or the client waits for it. `false` runs it in the thread where the event happened, so it has to be short |
 | `drop_after_trigger` | `true` unregisters the action after its first trigger |
 
-Registering an event again replaces its action, and releases the arguments of the previous one.
+Registering an event again replaces its action. The arguments of the previous one are released once every trigger that still runs is done with them.
 
 ### Who owns the data
 
 - **The action releases its data** with `cerver_event_data_delete ()` or `client_event_data_delete ()`, in every case: without it, the data leaks.
-- **The arguments belong to the registration**: they are released when the action is unregistered, when it is replaced, and in the teardown of the cerver or the client. With `drop_after_trigger`, they go with the data of the only trigger, and its `*_data_delete ()` releases them, so an action in its own thread can use them until it ends.
+- **The arguments are shared** by the registration and the data of each trigger (`shared_args`), and released when the last of them lets go: an action that is unregistered, replaced, or dropped after its trigger while that trigger still runs in its own thread keeps its arguments (and the response of a client event) until that trigger deletes its data. The cerver shares them since 1.9b-2 and the client since 1.9. A thread that can not be created releases its data.
 - **The pointers of the data** (`cerver`, `client`, `connection`) are only valid during the event. A lobby event keeps a reference to its `lobby` until its data is deleted (see [[Game]]).
-- **The response of a client event** (`response_data`), like a `LobbySummary`, is released with the data when `owns_response_data` is set.
+- **The response of a client event** (`response_data`), like a `LobbySummary`, is released with the data when `owns_response_data` is set; the response of the registration is shared like the arguments (`shared_response`).
 
 ### The events of a cerver
 
@@ -128,7 +128,7 @@ Registers the action of an event of the cerver, replacing the previous one. The 
 u8 cerver_event_unregister (Cerver *cerver, const CerverEventType event_type);
 ```
 
-Unregisters the action of an event and releases its arguments with its `delete_action_args`.
+Unregisters the action of an event; its arguments are released with its `delete_action_args` once every trigger that still runs is done with them.
 
 - **Returns** 0 on success, 1 on error or if the event had no action.
 
@@ -138,7 +138,7 @@ Unregisters the action of an event and releases its arguments with its `delete_a
 void cerver_event_data_delete (CerverEventData *event_data);
 ```
 
-Releases the data of an event: the reference to its lobby, and its arguments when the event was dropped after this trigger.
+Releases the data of an event: the reference to its lobby, and its reference to the arguments, which deletes them when it is the last one.
 
 #### `cerver_event_delete ()`
 
@@ -179,7 +179,7 @@ Registers the action of an event of the client. The action gets a `ClientEventDa
 u8 client_event_unregister (Client *client, const ClientEventType event_type);
 ```
 
-Unregisters the action of an event and releases its arguments.
+Unregisters the action of an event; its arguments and its response are released once every trigger that still runs is done with them.
 
 - **Returns** 0 on success, 1 on error or if the event had no action.
 
@@ -189,7 +189,7 @@ Unregisters the action of an event and releases its arguments.
 void client_event_data_delete (ClientEventData *event_data);
 ```
 
-Releases the data of an event, its response when it owns it (`owns_response_data`), and its arguments when the event was dropped after this trigger.
+Releases the data of an event, its response when it owns it (`owns_response_data`), and its references to the response and the arguments of the event; the last one deletes them.
 
 #### `client_event_type_description ()`
 
@@ -204,9 +204,9 @@ The description of an event of a client.
 | Type | What it is |
 |---|---|
 | `CerverEventType`, `ClientEventType` | The events above |
-| `CerverEvent`, `ClientEvent` | A registered action; set them only with the register functions |
-| `CerverEventData` | `cerver`, `client`, `connection`, `lobby`, `action_args`, `delete_action_args`, `owns_action_args` |
-| `ClientEventData` | `client`, `connection`, `response_data`, `delete_response_data`, `owns_response_data`, `action_args`, `delete_action_args`, `owns_action_args` |
+| `CerverEvent`, `ClientEvent` | A registered action; set them only with the register functions. They share `shared_args` (and `ClientEvent` its `shared_response`) with the data of each trigger; `ClientEvent::request_type` is deprecated, always 0 |
+| `CerverEventData` | `cerver`, `client`, `connection`, `lobby`, `action_args`, `delete_action_args`, `owns_action_args`, `shared_args` |
+| `ClientEventData` | `client`, `connection`, `response_data`, `delete_response_data`, `owns_response_data`, `action_args`, `delete_action_args`, `owns_action_args`, `shared_args`, `shared_response` |
 | `Work` | `void *(*) (void *)` |
 
 ## Constants

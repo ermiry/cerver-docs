@@ -8,8 +8,8 @@ The version of cerver that a program was built with.
 
 | Macro | What it is |
 |---|---|
-| `CERVER_VERSION` | The version, like `"1.8.1"`; the same as `version.txt` |
-| `CERVER_VERSION_NAME` | Its name, like `"Release 1.8.1"` or `"Beta 1.9b-1"` |
+| `CERVER_VERSION` | The version, like `"1.9"`; the same as `version.txt` |
+| `CERVER_VERSION_NAME` | Its name, like `"Release 1.9"` or `"Beta 1.9b-3"` |
 | `CERVER_VERSION_DATE` | The date of the version, `day/month/year` |
 | `CERVER_VERSION_TIME` | Its time |
 | `CERVER_VERSION_AUTHOR` | Its author |

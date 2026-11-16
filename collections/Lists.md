@@ -6,8 +6,8 @@ A `DoubleList` is a doubly linked list of pointers, with a destroy function for 
 
 ## Concepts
 
-- **Thread safety:** the functions lock the mutex of the list, except the ones that end in `_unsafe`, for a caller that already holds it (`dlist->mutex`) or a list that only one thread uses. The macros (`dlist_for_each ()`) do not lock.
-- **Ownership:** `dlist_delete ()` and `dlist_reset ()` release the data with the `destroy` of the list (`free ()` when it is `NULL`). `dlist_clear ()` only releases the elements and keeps the data, for data that other structures also point to.
+- **Thread safety:** the functions lock the mutex of the list, except the ones that end in `_unsafe`, for a caller that already holds it (`dlist->mutex`) or a list that only one thread uses. The macros (`dlist_for_each ()`) do not lock. The mutex is recursive, so the method of `dlist_traverse ()` or `dlist_get_apply ()` can read the same list.
+- **Ownership:** `dlist_delete ()` and `dlist_reset ()` release the data with the `destroy` of the list (a `NULL` one keeps the data). `dlist_clear ()` only releases the elements and keeps the data, for data that other structures also point to.
 - **The comparator** returns a negative number, 0 or a positive number, like `strcmp ()`; the searches, the removals by query, `dlist_insert_in_order ()` and `dlist_sort ()` use it, or one passed to the call.
 
 ## Usage
@@ -51,7 +51,7 @@ void dlist_clear_and_delete (void *dlist_ptr);
 void dlist_clear_or_delete (void *dlist_ptr);
 ```
 
-- `dlist_init ()` creates a list; `destroy` `NULL` uses `free ()`.
+- `dlist_init ()` creates a list; `destroy` `NULL` keeps the data (it is not released). It returns `NULL` if the list or its mutex can not be allocated.
 - `dlist_delete ()` releases the list, its elements and their data; the `_if_empty` and `_if_not_empty` versions only do it in that case, and return 0 when they deleted it.
 - `dlist_reset ()` releases the elements and their data and keeps the list; `dlist_clear ()` releases the elements and keeps the data; `dlist_clear_and_delete ()` clears and deletes the list; `dlist_clear_or_delete ()` clears a list that has elements and deletes an empty one.
 
@@ -92,7 +92,7 @@ void *dlist_remove_start (DoubleList *dlist);
 void *dlist_remove_end (DoubleList *dlist);
 void *dlist_remove_at (DoubleList *dlist, const unsigned int idx);
 
-unsigned int dlist_remove_by_condition (
+unsigned int dlist_remove_with_condition (
 	DoubleList *dlist,
 	bool (*compare)(const void *one, const void *two), const void *match,
 	bool delete_data
@@ -107,7 +107,7 @@ void *dlist_remove_start_unsafe (DoubleList *dlist);
 void *dlist_remove_end_unsafe (DoubleList *dlist);
 ```
 
-`dlist_remove_by_condition ()` removes every element for which `compare (data, match)` is `true`, releasing their data with `delete_data`, and returns how many it removed.
+`dlist_remove_with_condition ()` removes every element for which `compare (data, match)` is `true`, releasing their data with `delete_data`, and returns how many it removed.
 
 ### Search and traverse
 
@@ -121,7 +121,15 @@ int dlist_traverse (
 	const DoubleList *dlist,
 	void (*method)(void *list_element_data, void *method_args), void *method_args
 );
+
+int dlist_get_apply (
+	const DoubleList *dlist, const void *data,
+	int (*compare)(const void *one, const void *two),
+	void (*method)(void *list_element_data, void *method_args), void *method_args
+);
 ```
+
+`dlist_get_element ()` returns the element after the mutex is released: it is only valid while the list is not changed. `dlist_get_apply ()` finds the first element equal to `data` and runs `method` with its data while the mutex is held, so another thread can not remove it in between; the method can read the list but must not change it (0 if it ran, 1 if it was not found).
 
 Find the data or the element that compares equal to `data`, get the element or the data at an index, and call `method` with the data of each element and `method_args`, with the mutex (0 on success, 1 on error).
 
@@ -133,17 +141,17 @@ void **dlist_to_array (const DoubleList *dlist, size_t *count);
 DoubleList *dlist_copy (const DoubleList *dlist);
 DoubleList *dlist_clone (const DoubleList *dlist, void *(*clone) (const void *original));
 DoubleList *dlist_split_half (DoubleList *dlist);
-DoubleList *dlist_split_by_condition (DoubleList *dlist, bool (*compare)(const void *one, const void *two), const void *match);
+DoubleList *dlist_split_with_condition (DoubleList *dlist, bool (*compare)(const void *one, const void *two), const void *match);
 void dlist_merge_two (DoubleList *one, DoubleList *two);
-DoubleList *dlist_merge_two_by_condition (DoubleList *one, DoubleList *two, bool (*compare)(const void *one, const void *two), const void *match);
+DoubleList *dlist_merge_two_with_condition (DoubleList *one, DoubleList *two, bool (*compare)(const void *one, const void *two), const void *match);
 DoubleList *dlist_merge_many (DoubleList *many_dlists);
 ```
 
 - `dlist_sort ()` sorts with merge sort (0 on success, 1 on error).
 - `dlist_to_array ()` returns a new array of the pointers, and their count; the caller releases the array, not the data.
 - `dlist_copy ()` returns a list with the same pointers (clear one of the two before deleting both); `dlist_clone ()` creates new data with `clone`.
-- `dlist_split_half ()` moves the second half to a new list (the first one keeps the extra element of an odd size); `dlist_split_by_condition ()` moves the matching elements to a new list.
-- `dlist_merge_two ()` moves the elements of `two` to the end of `one`; `dlist_merge_two_by_condition ()` moves the matching elements of both to a new list; `dlist_merge_many ()` moves the elements of a list of lists to a new list.
+- `dlist_split_half ()` moves the second half to a new list (the first one keeps the extra element of an odd size); `dlist_split_with_condition ()` moves the matching elements to a new list.
+- `dlist_merge_two ()` moves the elements of `two` to the end of `one`; `dlist_merge_two_with_condition ()` moves the matching elements of both to a new list; `dlist_merge_many ()` moves the elements of a list of lists to a new list.
 
 ### Macros
 
