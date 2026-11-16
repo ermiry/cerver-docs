@@ -1,6 +1,6 @@
 # Input
 
-`#include <cerver/input.h>`
+`#include <cerver/system/input.h>`
 
 Reading from the terminal, for the interactive programs of the examples.
 

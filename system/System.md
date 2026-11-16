@@ -1,6 +1,6 @@
 # System
 
-`#include <cerver/system.h>`
+`#include <cerver/system/system.h>`
 
 The resources of the host and of the process: file systems, memory, load, cpu, host name and the process itself, read from `statvfs ()`, `sysinfo ()` and `/proc`. They are for monitoring, like an update of a cerver or the requests of an [[Admin]]. They read Linux interfaces.
 
